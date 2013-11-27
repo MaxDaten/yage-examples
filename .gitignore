@@ -1,0 +1,17 @@
+.DS_Store
+*.o
+*.hi
+build/
+*.a
+*.app/
+./yage
+dist/
+*.hp
+*.aux
+*.prof
+*.ps
+.cabal-sandbox
+cabal.sandbox.config
+cabal.config
+atlas.png
+hlint.html
