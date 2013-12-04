@@ -43,7 +43,7 @@ floorEntity :: RenderEntity
 floorEntity =
     let shader      = ShaderResource "res/glsl/3d/base.vert" "res/glsl/3d/base.frag"
         shdef       = perspectiveUniformDef
-        mesh        = gridMesh (50, 50)
+        mesh        = gridMesh (20, 20)
         attribs     = \m -> 
                       [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
                       , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal

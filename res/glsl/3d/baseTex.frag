@@ -6,7 +6,7 @@ in vec2 vertex_uv;
 in vec3 vertex_normal;
 
 uniform sampler2D textures;
-uniform vec3 global_light_direction = normalize(vec3(0.0, 0.0, 1.0)); // should be the other direction
+uniform vec3 global_light_direction = normalize(vec3(0.0, 1.0, 1.0)); // should be the other direction
 uniform vec3 global_light_intensity = vec3(1.0, 1.0, 1.0);
 
 void main()
