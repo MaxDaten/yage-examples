@@ -95,7 +95,7 @@ mainWire = proc () -> do
     velocity :: (Floating b, Ord b, Real t) 
              => b -> b -> Key -> YageWire t a b
     velocity acc att trigger = 
-        integrateAttenuated att 0 . (while . keyDown trigger . pure acc <|> 0)
+        integrateAttenuated att 0 . (whileKeyDown trigger . pure acc <|> 0)
 
 
 ---------------------------------------------------------------------------------------------------
@@ -105,12 +105,7 @@ mainWire = proc () -> do
     cameraRotationByInput =
         let upward                  = V3 0 1 0
             rightward               = V3 1 0 0
-        in rotationByVelocity upward rightward . arr(/1000) . meassureMouseVelocity (while . keyDown Key'LeftShift)
-
-
-    -- meassureMouseVelocity :: (Real t) => YageWire t' a a -> YageWire t a (V2 Float)
-    meassureMouseVelocity when' = 
-        when' . mouseVelocity <|> 0
+        in rotationByVelocity upward rightward . arr(/1000) . (whileKeyDown Key'LeftShift . mouseVelocity <|> 0)
 
 
     smoothRotationByKey :: (Real t) 

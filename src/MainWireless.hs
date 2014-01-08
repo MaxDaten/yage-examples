@@ -19,6 +19,7 @@ import           Data.Typeable
 import           Linear
 import           Yage.Math
 import           Yage.Font
+import           Yage.UI
 import qualified Yage.Text as T
 
 import           Data.Text.Lazy (Text)
@@ -124,8 +125,8 @@ main =
 
         return ()
         where
-            loop _win (inputState, winEvents) ((res, settings), scene, gui) = do
-                let settingsNew      = settings `updateSettings` (inputState, winEvents)
+            loop _win inputState ((res, settings), scene, gui) = do
+                let settingsNew      = settings `updateSettings` inputState
                     sceneNew         = scene `update3DScene` inputState `updateScene` inputState
                     guiNew           = gui `updateScene` inputState
 
@@ -143,10 +144,9 @@ main =
 -- Input & Events
 
 
-updateSettings :: RenderSettings -> (InputState, WindowEvents) -> RenderSettings
-updateSettings settings (inputSt, winEvents) =
+updateSettings :: RenderSettings -> InputState -> RenderSettings
+updateSettings settings inputSt =
     settings & reRenderConfig.rcConfWireframe .~ inputSt `isPressed` Key'F1
-             & reRenderTarget.targetSize      %?~ justResizedTo winEvents
 
 
 update3DScene :: RenderScene -> InputState -> RenderScene
