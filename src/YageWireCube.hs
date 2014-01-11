@@ -140,5 +140,5 @@ instance HasRenderView CubeView where
             scene   = emptyRenderScene (Camera3D _viewCamera (deg2rad 60))
                         `addRenderable` boxE
                         `addRenderable` floorE
-        in RenderUnit scene
+        in RenderNode scene
             
