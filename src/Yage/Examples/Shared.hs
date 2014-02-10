@@ -21,7 +21,7 @@ boxEntity :: RenderEntity
 boxEntity =
     let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
         shdef     = undefined -- perspectiveUniformDef
-        mesh      = cubeMesh
+        mesh      = cubeMesh $ V3 1 1 1
         attribs   = \m ->
                     [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
                     , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal

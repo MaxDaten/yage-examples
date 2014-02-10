@@ -54,7 +54,7 @@ mainWire = proc () -> do
     returnA -< CubeView 
                     (fpsCamera & cameraLocation    .~ cameraRot `rotate` (V3 0 2 8 + cameraPos)
                                & cameraOrientation .~ cameraRot)
-                    (Cube (V3 0 1 0) cubeRot 1)
+                    (Cube (V3 0 0.5 0) cubeRot 1)
 
     where
 
@@ -138,8 +138,6 @@ instance HasRenderScene CubeView where
         let boxE    = boxEntity & entityPosition    .~ _theCube^.cubePosition
                                 & entityOrientation .~ _theCube^.cubeOrientation
             floorE  = floorEntity & entityScale .~ 10
-            quadE   = boxEntity & entityPosition .~ V3 0 0 (-5)
-                                & entityScale    .~ 1
         in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 10000) (deg2rad 60))
             --`addRenderable` quadE
             `addRenderable` boxE
