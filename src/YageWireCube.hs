@@ -7,9 +7,10 @@ module Main where
 import Yage hiding (Event, at, key)
 import Yage.Rendering
 import Yage.Math
-import Yage.Wire
+import Yage.Wire hiding ((<>))
 
 import Yage.Examples.Shared
+
 
 
 settings :: WindowConfig
@@ -132,13 +133,15 @@ mainWire = proc () -> do
 -------------------------------------------------------------------------------
 -- View Definition
 
-instance HasRenderView CubeView where
-    getRenderView CubeView{..} = 
+instance HasRenderScene CubeView where
+    getRenderScene CubeView{..} = 
         let boxE    = boxEntity & entityPosition    .~ _theCube^.cubePosition
                                 & entityOrientation .~ _theCube^.cubeOrientation
             floorE  = floorEntity & entityScale .~ 10
-            scene   = emptyRenderScene (Camera3D _viewCamera (deg2rad 60))
-                        `addRenderable` boxE
-                        `addRenderable` floorE
-        in RenderNode scene
+            quadE   = boxEntity & entityPosition .~ V3 0 0 (-5)
+                                & entityScale    .~ 1
+        in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 10000) (deg2rad 60))
+            --`addRenderable` quadE
+            `addRenderable` boxE
+            `addRenderable` floorE
             

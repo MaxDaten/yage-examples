@@ -19,18 +19,18 @@ import           Yage.Font
 
 boxEntity :: RenderEntity
 boxEntity =
-    let shader    = ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
-        shdef     = perspectiveUniformDef
+    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
+        shdef     = undefined -- perspectiveUniformDef
         mesh      = cubeMesh
         attribs   = \m ->
                     [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
                     , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                    , "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
+                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
                     , "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
                     ]
         rdef      = RenderDefinition
             { _rdefData     = makeMesh 4711 "cube" mesh attribs
-            , _rdefProgram  = (shader, shdef)
+            , _rdefProgram  = undefined -- (shader, shdef)
             , _rdefTextures = [ TextureDefinition (0, "textures")
                                (TextureFile ("res" </> "Brown_Leather_Texture.png"))
                               ]
@@ -43,11 +43,11 @@ floorEntity :: RenderEntity
 floorEntity =
     let shader      = ShaderResource "res/glsl/3d/base.vert" "res/glsl/3d/base.frag"
         shdef       = perspectiveUniformDef
-        mesh        = gridMesh (20, 20)
+        mesh        = gridMesh $ V2 20 20
         attribs     = \m -> 
                       [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
                       , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                      , "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
+                      --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
                       ]
         rdef        = RenderDefinition
                         { _rdefData     = makeMesh 0815 "floor" mesh attribs
@@ -89,15 +89,12 @@ textEntity2D fontTexture text ident =
 
 
 perspectiveUniformDef :: ShaderDefinition ()
-perspectiveUniformDef = do
-    vdef   <- view seViewDef
-    "mvp_matrix"        != vdef^.vdMVPMatrix
-    "modelview_matrix"  != vdef^.vdModelViewMatrix
-    "normal_matrix"     != vdef^.vdNormalMatrix
+perspectiveUniformDef = return ()
 
 
 screenSpaceDef :: ShaderDefinition ()
-screenSpaceDef = do
-    vdef <- view seViewDef
-    "mvp_matrix"      != vdef^.vdMVPMatrix
+screenSpaceDef = return ()
 
+
+screenDef :: ShaderDefinition ()
+screenDef = return ()
