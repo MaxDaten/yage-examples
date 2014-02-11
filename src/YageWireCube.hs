@@ -135,11 +135,26 @@ mainWire = proc () -> do
 
 instance HasRenderScene CubeView where
     getRenderScene CubeView{..} = 
-        let boxE    = boxEntity & entityPosition    .~ _theCube^.cubePosition
-                                & entityOrientation .~ _theCube^.cubeOrientation
-            floorE  = floorEntity & entityScale .~ 10
+        let boxE        = boxEntity 
+                            & entityPosition    .~ _theCube^.cubePosition
+                            & entityOrientation .~ _theCube^.cubeOrientation
+            
+            sphereE     = sphereEntity 2 SphericalNormals 
+                            & entityPosition    .~ V3 (-2) 0.5 0
+                            & entityOrientation .~ _theCube^.cubeOrientation
+
+            coneE       = coneEntity 16
+                            & entityPosition    .~ V3 2 0 0
+                            & entityOrientation .~ _theCube^.cubeOrientation
+            pyramidE    = pyramidEntity
+                            & entityPosition    .~ V3 0 0 2
+                            & entityOrientation .~ _theCube^.cubeOrientation
+            floorE      = floorEntity & entityScale .~ 10
         in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 10000) (deg2rad 60))
             --`addRenderable` quadE
             `addRenderable` boxE
+            `addRenderable` sphereE
+            `addRenderable` coneE
+            `addRenderable` pyramidE
             `addRenderable` floorE
             

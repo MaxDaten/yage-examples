@@ -1,5 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module Yage.Examples.Shared where
+module Yage.Examples.Shared
+    ( module Yage.Examples.Shared
+    , module Prims
+    ) where
 
 import Yage.Prelude hiding (Text)
 
@@ -8,6 +11,8 @@ import           Data.Text.Lazy (Text)
 
 import Yage.Rendering
 import Yage.Rendering.Primitives
+import Yage.Rendering.Primitives as Prims (NormalSmoothness(..))
+
 
 import           Yage.Font
 
@@ -16,6 +21,65 @@ import           Yage.Font
 
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
+
+sphereEntity :: Int -> NormalSmoothness -> RenderEntity
+sphereEntity subdivides smoothness =
+    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
+        shdef     = undefined -- perspectiveUniformDef
+        mesh      = geodesicSphereMesh smoothness subdivides 0.5
+        attribs   = \m ->
+                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
+                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
+                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
+                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
+                    ]
+        rdef      = RenderDefinition
+            { _rdefData     = makeMesh 42 "sphere" mesh attribs
+            , _rdefProgram  = undefined -- (shader, shdef)
+            , _rdefTextures = []
+            , _rdefMode     = Triangles
+            }
+    in mkRenderEntity rdef
+
+
+coneEntity :: Int -> RenderEntity
+coneEntity divs =
+    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
+        shdef     = undefined -- perspectiveUniformDef
+        mesh      = coneMesh 0.5 1 divs
+        attribs   = \m ->
+                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
+                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
+                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
+                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
+                    ]
+        rdef      = RenderDefinition
+            { _rdefData     = makeMesh 43 "cone" mesh attribs
+            , _rdefProgram  = undefined -- (shader, shdef)
+            , _rdefTextures = []
+            , _rdefMode     = Triangles
+            }
+    in mkRenderEntity rdef
+
+pyramidEntity :: RenderEntity
+pyramidEntity =
+    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
+        shdef     = undefined -- perspectiveUniformDef
+        mesh      = pyramidMesh 1
+        attribs   = \m ->
+                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
+                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
+                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
+                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
+                    ]
+        rdef      = RenderDefinition
+            { _rdefData     = makeMesh 44 "pyramid" mesh attribs
+            , _rdefProgram  = undefined -- (shader, shdef)
+            , _rdefTextures = []
+            , _rdefMode     = Triangles
+            }
+    in mkRenderEntity rdef
+
 
 boxEntity :: RenderEntity
 boxEntity =
