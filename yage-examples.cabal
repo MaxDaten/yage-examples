@@ -53,11 +53,12 @@ executable yage-cube
                           OverloadedStrings
     default-language:     Haskell2010
 
-    build-depends:        base            >=4.6       &&    <4.7
+    build-depends:        base            <  5
                         , yage            >= 0.0.3
                         , yage-contrib    >= 0.0.0.3
                         , yage-core       >= 0.0.2
                         , yage-rendering  >= 0.0.3
+                        , yage-geometry   >= 0.0.0.1
 
                         , text            >= 0.11
                         , netwire         == 5.0.0

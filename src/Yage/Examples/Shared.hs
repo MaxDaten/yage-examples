@@ -6,15 +6,11 @@ module Yage.Examples.Shared
 
 import Yage.Prelude hiding (Text)
 
-import           Data.Text.Lazy (Text)
+import Yage.Rendering hiding (P3, P3N3)
+import Yage.Primitives
+import Yage.Primitives as Prims (NormalSmoothness(..))
 
-
-import Yage.Rendering
-import Yage.Rendering.Primitives
-import Yage.Rendering.Primitives as Prims (NormalSmoothness(..))
-
-
-import           Yage.Font
+import           Yage.Vertex
 
 
 
@@ -22,79 +18,43 @@ import           Yage.Font
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
 
-sphereEntity :: Int -> NormalSmoothness -> RenderEntity
-sphereEntity subdivides smoothness =
-    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
-        shdef     = undefined -- perspectiveUniformDef
-        mesh      = geodesicSphereMesh smoothness subdivides 0.5
-        attribs   = \m ->
-                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
-                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
-                    ]
+sphereEntity :: Int -> RenderEntity P3N3
+sphereEntity subdivides =
+    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ geoSphere subdivides 0.5) :: [Vertex P3N3]
         rdef      = RenderDefinition
-            { _rdefData     = makeMesh 42 "sphere" mesh attribs
-            , _rdefProgram  = undefined -- (shader, shdef)
+            { _rdefData     = makeMesh "sphere" mesh
             , _rdefTextures = []
             , _rdefMode     = Triangles
             }
     in mkRenderEntity rdef
 
 
-coneEntity :: Int -> RenderEntity
+coneEntity :: Int -> RenderEntity P3N3
 coneEntity divs =
-    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
-        shdef     = undefined -- perspectiveUniformDef
-        mesh      = coneMesh 0.5 1 divs
-        attribs   = \m ->
-                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
-                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
-                    ]
+    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ cone 0.5 1 divs) :: [Vertex P3N3]
         rdef      = RenderDefinition
-            { _rdefData     = makeMesh 43 "cone" mesh attribs
-            , _rdefProgram  = undefined -- (shader, shdef)
+            { _rdefData     = makeMesh "cone" mesh
             , _rdefTextures = []
             , _rdefMode     = Triangles
             }
     in mkRenderEntity rdef
 
-pyramidEntity :: RenderEntity
+pyramidEntity :: RenderEntity P3N3
 pyramidEntity =
-    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
-        shdef     = undefined -- perspectiveUniformDef
-        mesh      = pyramidMesh 1
-        attribs   = \m ->
-                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
-                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                    --, "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
-                    ]
+    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ pyramid 1) :: [Vertex P3N3]
         rdef      = RenderDefinition
-            { _rdefData     = makeMesh 44 "pyramid" mesh attribs
-            , _rdefProgram  = undefined -- (shader, shdef)
+            { _rdefData     = makeMesh "pyramid" mesh
             , _rdefTextures = []
             , _rdefMode     = Triangles
             }
     in mkRenderEntity rdef
 
 
-boxEntity :: RenderEntity
+boxEntity :: RenderEntity P3N3
 boxEntity =
-    let shader    = undefined -- ShaderResource "res/glsl/3d/baseTex.vert" "res/glsl/3d/baseTex.frag"
-        shdef     = undefined -- perspectiveUniformDef
-        mesh      = cubeMesh $ V3 1 1 1
-        attribs   = \m ->
-                    [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
-                    , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                    --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                    , "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
-                    ]
+    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ cube 1) :: [Vertex P3N3]
         rdef      = RenderDefinition
-            { _rdefData     = makeMesh 4711 "cube" mesh attribs
-            , _rdefProgram  = undefined -- (shader, shdef)
+            { _rdefData     = makeMesh "cube" mesh
             , _rdefTextures = [ TextureDefinition (0, "textures")
                                (TextureFile ("res" </> "Brown_Leather_Texture.png"))
                               ]
@@ -103,34 +63,25 @@ boxEntity =
     in mkRenderEntity rdef
 
 
-floorEntity :: RenderEntity
+floorEntity :: RenderEntity P3N3
 floorEntity =
-    let shader      = ShaderResource "res/glsl/3d/base.vert" "res/glsl/3d/base.frag"
-        shdef       = perspectiveUniformDef
-        mesh        = gridMesh $ V2 20 20
-        attribs     = \m -> 
-                      [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
-                      , "in_vert_normal"   @= m^.mDataVertices^..traverse.vNormal
-                      --, "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                      ]
+    let mesh        = (vertices . triangles $ normalCalculator SphericalNormals $ grid 20 1) :: [Vertex P3N3]
         rdef        = RenderDefinition
-                        { _rdefData     = makeMesh 0815 "floor" mesh attribs
-                        , _rdefProgram  = (shader, shdef)
+                        { _rdefData     = makeMesh "floor" mesh
                         , _rdefTextures = []
                         , _rdefMode     = Lines
                         }
     in mkRenderEntity rdef
 
 
-
+{--
 textEntity3D :: FontTexture -> Text -> Int -> RenderText
 textEntity3D fontTexture text ident =
     let fontShader        = ShaderResource "res/glsl/3d/baseFont.vert" "res/glsl/3d/baseFont.frag"
         fontShaderDef     = perspectiveUniformDef
-        attribs           = \m -> 
-                            [ "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
+        attribs           = [ {-- "in_vert_position" @= m^.mDataVertices^..traverse.vPosition
                             , "in_vert_color"    @= m^.mDataVertices^..traverse.vColor
-                            , "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture
+                            , "in_vert_texture"  @= m^.mDataVertices^..traverse.vTexture --}
                             ]
     in RenderText 
         { _textIdent   = ident
@@ -147,18 +98,7 @@ textEntity2D fontTexture text ident =
     & textShader.shaderDef .~ screenSpaceDef
     & textShader.shaderRes .~ ShaderResource "res/glsl/3d/baseFont.vert" "res/glsl/3d/baseFont.frag"
 
+--}
 
 ---------------------------------------------------------------------------------------------------
 -- Shader Definitions
-
-
-perspectiveUniformDef :: ShaderDefinition ()
-perspectiveUniformDef = return ()
-
-
-screenSpaceDef :: ShaderDefinition ()
-screenSpaceDef = return ()
-
-
-screenDef :: ShaderDefinition ()
-screenDef = return ()

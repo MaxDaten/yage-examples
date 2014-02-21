@@ -1,14 +1,20 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Main where
 
-import Yage hiding (Event, at, key)
+import Yage
 import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
 
+import Yage.Camera
+import Yage.Scene
+import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 
 
@@ -45,6 +51,8 @@ makeLenses ''Cube
 main :: IO ()
 main = yageMain "yage-cube" settings mainWire clockSession
 
+startPos :: V3 Float
+startPos = V3 0 2.3 5
 
 mainWire :: (Real t) => YageWire t () CubeView
 mainWire = proc () -> do
@@ -52,7 +60,7 @@ mainWire = proc () -> do
     cameraPos <- cameraMovementByInput -< ()
     cameraRot <- cameraRotationByInput -< ()
     returnA -< CubeView 
-                    (fpsCamera & cameraLocation    .~ cameraRot `rotate` (V3 0 2 8 + cameraPos)
+                    (fpsCamera & cameraLocation    .~ cameraRot `rotate` (startPos + cameraPos)
                                & cameraOrientation .~ cameraRot)
                     (Cube (V3 0 0.5 0) cubeRot 1)
 
@@ -128,33 +136,30 @@ mainWire = proc () -> do
         in combineOrientations . applyOrientations . integral 0
 
 
-
-
 -------------------------------------------------------------------------------
 -- View Definition
 
-instance HasRenderScene CubeView where
-    getRenderScene CubeView{..} = 
+instance HasScene CubeView GeoVertex where
+    getScene CubeView{..} = 
         let boxE        = boxEntity 
-                            & entityPosition    .~ _theCube^.cubePosition
-                            & entityOrientation .~ _theCube^.cubeOrientation
+                            & entityPosition    .~ (realToFrac <$> _theCube^.cubePosition)
+                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             
-            sphereE     = sphereEntity 2 SphericalNormals 
+            sphereE     = sphereEntity 2
                             & entityPosition    .~ V3 (-2) 0.5 0
-                            & entityOrientation .~ _theCube^.cubeOrientation
+                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
 
             coneE       = coneEntity 16
                             & entityPosition    .~ V3 2 0 0
-                            & entityOrientation .~ _theCube^.cubeOrientation
+                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             pyramidE    = pyramidEntity
                             & entityPosition    .~ V3 0 0 2
-                            & entityOrientation .~ _theCube^.cubeOrientation
-            floorE      = floorEntity & entityScale .~ 10
-        in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 10000) (deg2rad 60))
-            --`addRenderable` quadE
+                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+            --floorE      = floorEntity & entityScale .~ 10
+        in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
             `addRenderable` boxE
             `addRenderable` sphereE
             `addRenderable` coneE
             `addRenderable` pyramidE
-            `addRenderable` floorE
+            --`addRenderable` floorE
             

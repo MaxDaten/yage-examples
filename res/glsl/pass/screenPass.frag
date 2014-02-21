@@ -2,18 +2,18 @@
 
 // in vec4 interpolated_color;
 
-uniform sampler2D texture;
+uniform sampler2D screen_texture;
 const float blurSizeH = 1.0 / 300.0;
 const float blurSizeV = 1.0 / 200.0;
 const ivec2 size = ivec2(2);
 const float blurArea = 25;
-in vec2 vertex_uv;
+in vec2 VertexTex;
 
 layout (location = 0) out vec4 pixelColor;
 
 void main()
 {
-    pixelColor = texture( texture, vertex_uv );
+    pixelColor = texture( screen_texture, VertexTex );
     // vec4 sum = vec4(0.0);
 
     // for (int x = -(size.x); x <= (size.x); x++)

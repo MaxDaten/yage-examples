@@ -1,21 +1,21 @@
 #version 330 core
 
 
-in vec4 in_vert_position;
-in vec2 in_vert_texture;
+in vec3 vposition;
+in vec2 vtexture;
 
 uniform mat4 projection_matrix  = mat4(0.0);
 uniform mat4 model_matrix       = mat4(0.0);
 
-out vec2 vertex_uv;
-out vec4 vertex_position;
+out vec2 VertexTex;
+out vec4 VertexPos;
 
 void main()
 {
     
-    vertex_position = projection_matrix * model_matrix * in_vert_position;
+    VertexPos   = projection_matrix * model_matrix * vec4(vposition, 1.0);
     
-    vertex_uv          = in_vert_texture;
+    VertexTex   = vtexture;
 
-    gl_Position = vertex_position;
+    gl_Position = VertexPos;
 }
