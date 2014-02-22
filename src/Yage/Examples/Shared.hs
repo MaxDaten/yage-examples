@@ -41,7 +41,7 @@ coneEntity divs =
 
 pyramidEntity :: RenderEntity P3N3
 pyramidEntity =
-    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ pyramid 1) :: [Vertex P3N3]
+    let mesh      = (vertices . triangles $ normalCalculator FacetteNormals $ pyramid 1) :: [Vertex P3N3]
         rdef      = RenderDefinition
             { _rdefData     = makeMesh "pyramid" mesh
             , _rdefTextures = []
@@ -52,7 +52,7 @@ pyramidEntity =
 
 boxEntity :: RenderEntity P3N3
 boxEntity =
-    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ cube 1) :: [Vertex P3N3]
+    let mesh      = (vertices . triangles $ normalCalculator FacetteNormals $ cube 1) :: [Vertex P3N3]
         rdef      = RenderDefinition
             { _rdefData     = makeMesh "cube" mesh
             , _rdefTextures = [ TextureDefinition (0, "textures")
@@ -65,7 +65,7 @@ boxEntity =
 
 floorEntity :: RenderEntity P3N3
 floorEntity =
-    let mesh        = (vertices . triangles $ normalCalculator SphericalNormals $ grid 20 1) :: [Vertex P3N3]
+    let mesh        = vertices . toLines $ normalCalculator FacetteNormals $ grid 100 1 :: [Vertex P3N3]
         rdef        = RenderDefinition
                         { _rdefData     = makeMesh "floor" mesh
                         , _rdefTextures = []

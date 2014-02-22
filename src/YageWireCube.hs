@@ -149,17 +149,17 @@ instance HasScene CubeView GeoVertex where
                             & entityPosition    .~ V3 (-2) 0.5 0
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
 
-            coneE       = coneEntity 16
+            coneE       = coneEntity 12
                             & entityPosition    .~ V3 2 0 0
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             pyramidE    = pyramidEntity
                             & entityPosition    .~ V3 0 0 2
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
-            --floorE      = floorEntity & entityScale .~ 10
+            floorE      = floorEntity & entityScale .~ 10
         in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
             `addRenderable` boxE
             `addRenderable` sphereE
             `addRenderable` coneE
             `addRenderable` pyramidE
-            --`addRenderable` floorE
+            `addRenderable` floorE
             
