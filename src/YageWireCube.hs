@@ -156,12 +156,12 @@ instance HasScene CubeView GeoVertex where
                             & entityPosition    .~ V3 0 0 2
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             floorE      = floorEntity & entityScale .~ 10
-            --objE        = objEntity obj
-        in emptyRenderScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
-            `addRenderable` boxE
-            `addRenderable` sphereE
-            `addRenderable` coneE
-            `addRenderable` pyramidE
-            `addRenderable` floorE
+            --objE        = objEntity $ OBJFile ("res" </> "obj" </> "head.obj")
+        in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
+            `addEntity` boxE
+            `addEntity` sphereE
+            `addEntity` coneE
+            `addEntity` pyramidE
+            `addEntity` floorE
             --`addRenderable` objE
             

@@ -7,7 +7,9 @@ module Yage.Examples.Shared
 import Yage.Prelude hiding (Text)
 
 
-import Yage.Rendering hiding (P3, P3N3)
+import Yage.Rendering hiding (P3, P3N3, _renderData, _renderMode)
+import Yage.Scene
+import Yage.Rendering.Transformation
 import Yage.Primitives
 import "yage" Yage.Geometry
 
@@ -15,72 +17,70 @@ import "yage" Yage.Geometry
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
 
-sphereEntity :: Int -> RenderEntity P3N3
+sphereEntity :: Int -> SceneEntity P3N3
 sphereEntity subdivides =
-    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ geoSphere subdivides 0.5) :: [Vertex P3N3]
-        rdef      = RenderDefinition
-            { _rdefData     = Right $ makeMesh "sphere" mesh
-            , _rdefTextures = []
-            , _rdefMode     = Triangles
-            }
-    in mkRenderEntity rdef
+    let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ geoSphere subdivides 0.5) :: [Vertex P3N3]            
+    in SceneEntity 
+        { _renderData     = Right $ makeMesh "sphere" mesh
+        , _textures       = []
+        , _renderMode     = Triangles
+        , _transformation = idTransformation
+        }
 
-
-coneEntity :: Int -> RenderEntity P3N3
+coneEntity :: Int -> SceneEntity P3N3
 coneEntity divs =
     let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ cone 0.5 1 divs) :: [Vertex P3N3]
-        rdef      = RenderDefinition
-            { _rdefData     = Right $ makeMesh "cone" mesh
-            , _rdefTextures = []
-            , _rdefMode     = Triangles
-            }
-    in mkRenderEntity rdef
+    in SceneEntity 
+        { _renderData     = Right $ makeMesh "cone" mesh
+        , _textures       = []
+        , _renderMode     = Triangles
+        , _transformation = idTransformation
+        }
 
-pyramidEntity :: RenderEntity P3N3
+pyramidEntity :: SceneEntity P3N3
 pyramidEntity =
     let mesh      = (vertices . triangles $ normalCalculator FacetteNormals $ pyramid 1) :: [Vertex P3N3]
-        rdef      = RenderDefinition
-            { _rdefData     = Right $ makeMesh "pyramid" mesh
-            , _rdefTextures = []
-            , _rdefMode     = Triangles
-            }
-    in mkRenderEntity rdef
+    in SceneEntity 
+        { _renderData     = Right $ makeMesh "pyramid" mesh
+        , _textures       = []
+        , _renderMode     = Triangles
+        , _transformation = idTransformation
+        }
 
 
-boxEntity :: RenderEntity P3N3
+boxEntity :: SceneEntity P3N3
 boxEntity =
     let mesh      = (vertices . triangles $ normalCalculator FacetteNormals $ cube 1) :: [Vertex P3N3]
-        rdef      = RenderDefinition
-            { _rdefData     = Right $ makeMesh "cube" mesh
-            , _rdefTextures = [ TextureDefinition (0, "textures")
+    in SceneEntity 
+        { _renderData     = Right $ makeMesh "box" mesh
+        , _textures       = [ TextureDefinition (0, "textures")
                                (TextureFile ("res" </> "Brown_Leather_Texture.png"))
-                              ]
-            , _rdefMode     = Triangles
-            }
-    in mkRenderEntity rdef
+                            ]
+        , _renderMode     = Triangles
+        , _transformation = idTransformation
+        }
 
-
-floorEntity :: RenderEntity P3N3
+floorEntity :: SceneEntity P3N3
 floorEntity =
     let mesh        = vertices . toLines $ normalCalculator FacetteNormals $ grid 100 1 :: [Vertex P3N3]
-        rdef        = RenderDefinition
-                        { _rdefData     = Right $ makeMesh "floor" mesh
-                        , _rdefTextures = []
-                        , _rdefMode     = Lines
-                        }
-    in mkRenderEntity rdef
+    in SceneEntity 
+        { _renderData     = Right $ makeMesh "floor" mesh
+        , _textures       = []
+        , _renderMode     = Lines
+        , _transformation = idTransformation
+        }
 
-objEntity :: OBJ -> RenderEntity P3N3
+{--
+objEntity :: SceneEntity P3N3
 objEntity obj =
-    let mesh         = geoElements $ loadObj obj :: Vector (Vertex P3N3)
-        Just theName = obj^.name <|> Just "unnamed obj"
-        rdef         = RenderDefinition
-                        { _rdefData     = Right $ makeMeshV theName mesh
+    let rdef         = RenderDefinition
+                        { _rdefData     = Left obj
                         , _rdefTextures = []
                         , _rdefMode     = Triangles
                         }
     in mkRenderEntity rdef
 
+--}
 
 {--
 textEntity3D :: FontTexture -> Text -> Int -> RenderText
