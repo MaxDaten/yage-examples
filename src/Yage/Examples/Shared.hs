@@ -11,6 +11,7 @@ import Yage.Rendering hiding (P3, P3N3, _renderData, _renderMode)
 import Yage.Scene
 import Yage.Rendering.Transformation
 import Yage.Primitives
+import Yage.Resources
 import "yage" Yage.Geometry
 
 
@@ -70,16 +71,16 @@ floorEntity =
         , _transformation = idTransformation
         }
 
-{--
-objEntity :: SceneEntity P3N3
-objEntity obj =
-    let rdef         = RenderDefinition
-                        { _rdefData     = Left obj
-                        , _rdefTextures = []
-                        , _rdefMode     = Triangles
-                        }
-    in mkRenderEntity rdef
+objEntity :: VertexResource P3N3 -> SceneEntity P3N3
+objEntity res =
+    SceneEntity
+        { _renderData     = Left res
+        , _renderMode     = Triangles
+        , _textures       = []
+        , _transformation = idTransformation
+        }
 
+{--
 --}
 
 {--

@@ -8,6 +8,7 @@
 module Main where
 
 import Yage
+import Yage.Lens
 import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
@@ -16,6 +17,8 @@ import Yage.Camera
 import Yage.Scene
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
+import Yage.Resources
+
 
 
 
@@ -125,7 +128,7 @@ mainWire = proc () -> do
             angleVel    = velocity acc att key
             rot         = axisAngle axis <$> integral 0 . arr (dir*) . angleVel
         in proc inQ -> do
-            rotQ <- rot -< ()
+            rotQ    <- rot -< ()
             returnA -< inQ * rotQ
 
 
@@ -142,26 +145,28 @@ mainWire = proc () -> do
 instance HasScene CubeView GeoVertex where
     getScene CubeView{..} = 
         let boxE        = boxEntity 
-                            & entityPosition    .~ (realToFrac <$> _theCube^.cubePosition)
+                            & entityPosition    .~ V3 0 0 (-3) --(realToFrac <$> _theCube^.cubePosition)
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             
             sphereE     = sphereEntity 2
-                            & entityPosition    .~ V3 (-2) 0.5 0
+                            & entityPosition    .~ V3 (-3) 0.5 0
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
 
             coneE       = coneEntity 12
-                            & entityPosition    .~ V3 2 0 0
+                            & entityPosition    .~ V3 3 0 0
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             pyramidE    = pyramidEntity
-                            & entityPosition    .~ V3 0 0 2
+                            & entityPosition    .~ V3 0 0 3
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             floorE      = floorEntity & entityScale .~ 10
-            --objE        = objEntity $ OBJFile ("res" </> "obj" </> "head.obj")
+            objE        = objEntity (OBJResource ("res" </> "obj" </> "head.obj") (undefined))
+                            & entityPosition     .~ V3 0 2 0
+                            & entityScale        *~ 2
         in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
             `addEntity` boxE
             `addEntity` sphereE
             `addEntity` coneE
             `addEntity` pyramidE
             `addEntity` floorE
-            --`addRenderable` objE
+            `addEntity` objE
             
