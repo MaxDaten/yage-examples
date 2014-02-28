@@ -63,7 +63,7 @@ boxEntity =
 
 floorEntity :: SceneEntity P3N3
 floorEntity =
-    let mesh        = vertices . toLines $ normalCalculator FacetteNormals $ grid 100 1 :: [Vertex P3N3]
+    let mesh        = vertices . toLines $ normalCalculator FacetteNormals $ grid 25 1 :: [Vertex P3N3]
     in SceneEntity 
         { _renderData     = Right $ makeMesh "floor" mesh
         , _textures       = []

@@ -22,7 +22,11 @@ Flag dev
 
 Flag perf
     Description:   Enables optimizations
-    Default:       True 
+    Default:       True
+
+Flag prof
+    Description:   Enables profiling
+    Default:       False
 
 
 
@@ -47,6 +51,12 @@ executable yage-cube
         ghc-options:      -threaded -O2
     else
         ghc-options:      -threaded -O0
+
+    if flag(dev)
+        ghc-options:      -rtsopts
+
+    if flag(prof)
+        ghc-options:      -auto-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
