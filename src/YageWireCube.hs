@@ -176,5 +176,5 @@ instance HasScene CubeView GeoVertex where
             `addEntity` coneE
             `addEntity` pyramidE
             `addEntity` floorE
-            --`addEntity` objE
+            `addEntity` objE
             
