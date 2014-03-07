@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Main where
 
@@ -16,19 +17,18 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.Light
+import Yage.Rendering.Transformation
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 import Yage.Resources
 
-
-
-
 settings :: WindowConfig
 settings = WindowConfig
-    { windowSize = (800, 600)
+    { windowSize = (1600, 1200)
     , windowHints = 
-        [ WindowHint'ContextVersionMajor  3
-        , WindowHint'ContextVersionMinor  2
+        [ WindowHint'ContextVersionMajor  4
+        , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
         , WindowHint'OpenGLForwardCompat  True
         , WindowHint'RefreshRate          60
@@ -40,6 +40,7 @@ settings = WindowConfig
 data CubeView = CubeView
     { _viewCamera     :: CameraHandle
     , _theCube        :: !Cube
+    , _lightPos       :: !(V3 Float)
     }
     deriving (Show)
 
@@ -56,17 +57,19 @@ main :: IO ()
 main = yageMain "yage-cube" settings mainWire (1/60)
 
 camStartPos :: V3 Float
-camStartPos = V3 0 2.3 5
+camStartPos = V3 0 0 2
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
 
-mainWire :: (Real t) => YageWire t () CubeView
+mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
     camera    <- cameraMovement . cameraRotation -< fpsCamera
+    lightPos  <- arr (\t-> V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
 
     returnA -< CubeView camera
                     (Cube 1 cubeRot 1)
+                    (lightPos)
 
     where
 
@@ -138,8 +141,6 @@ mainWire = proc () -> do
 ---------------------------------------------------------------------------------------------------
 
 
-
-
     rotationByVelocity :: (Real t) => V3 Float -> V3 Float -> YageWire t (V2 Float) (Quaternion Float)
     rotationByVelocity !xMap !yMap =
         let applyOrientations   = arr (axisAngle xMap . (^._x)) &&& arr (axisAngle yMap . (^._y))
@@ -150,9 +151,11 @@ mainWire = proc () -> do
 -------------------------------------------------------------------------------
 -- View Definition
 
-instance HasScene CubeView GeoVertex where
+instance HasScene CubeView GeoVertex LitVertex where
     getScene CubeView{..} = 
-        let boxE        = boxEntity
+        let 
+            {--
+            boxE        = boxEntity
                             & entityPosition    .~ V3 0 0 (-3) --(realToFrac <$> _theCube^.cubePosition)
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             
@@ -167,14 +170,25 @@ instance HasScene CubeView GeoVertex where
                             & entityPosition    .~ V3 0 0 3
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             floorE      = floorEntity & entityScale .~ 10
-            objE        = objEntity (OBJResource ("res" </> "obj" </> "head.obj") (undefined))
-                            & entityPosition     .~ V3 0 2 0
-                            & entityScale        *~ 2
-        in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 60))
-            `addEntity` boxE
-            `addEntity` sphereE
-            `addEntity` coneE
-            `addEntity` pyramidE
-            `addEntity` floorE
+            --}
+            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ") (undefined))
+            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/square.obj") (undefined))
+            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/cube.obj") (undefined))
+            objE        = objEntity (YGMResource ("res" </> "model" </> "head.ygm") (undefined))
+                            & entityPosition     .~ V3 0 0.5 0
+                            & entityScale        *~ 5
+                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & textures           .~ [ TextureDefinition (0, "tex_albedo")  $ TextureFile ("res" </> "tex" </> "head_albedo.jpg")
+                                                    , TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
+                                                    --, TextureDefinition (2, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent.jpg")
+                                                    ]
+            pLight01    = (mkLight $ Light (Pointlight (realToFrac <$> _lightPos) 0.8) (LightAttributes (V4 0.1 0.1 0.1 1) (V4 0.8 0.7 0.7 1) (V4 0.2 0.2 0.2 1) 2))
+        in emptyScene (Camera3D _viewCamera (CameraPlanes 0.0001 100) (deg2rad 75))
+            --`addEntity` boxE
+            --`addEntity` sphereE
+            --`addEntity` coneE
+            --`addEntity` pyramidE
+            --`addEntity` floorE
             `addEntity` objE
+            `addLight` pLight01
             

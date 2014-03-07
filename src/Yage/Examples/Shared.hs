@@ -7,17 +7,18 @@ module Yage.Examples.Shared
 import Yage.Prelude hiding (Text)
 
 
-import Yage.Rendering hiding (P3, P3N3, _renderData, _renderMode)
+import Yage.Rendering hiding (P3, P3N3, P3T2, _renderData, _renderMode)
 import Yage.Scene
 import Yage.Rendering.Transformation
-import Yage.Primitives
+--import Yage.Primitives
 import Yage.Resources
-import "yage" Yage.Geometry
+--import "yage" Yage.Geometry
 
 
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
 
+{--
 sphereEntity :: Int -> SceneEntity P3N3
 sphereEntity subdivides =
     let mesh      = (vertices . triangles $ normalCalculator SphericalNormals $ geoSphere subdivides 0.5) :: [Vertex P3N3]            
@@ -70,8 +71,8 @@ floorEntity =
         , _renderMode     = Lines
         , _transformation = idTransformation
         }
-
-objEntity :: VertexResource P3N3 -> SceneEntity P3N3
+--}
+objEntity :: VertexResource a -> SceneEntity a
 objEntity res =
     SceneEntity
         { _renderData     = Left res

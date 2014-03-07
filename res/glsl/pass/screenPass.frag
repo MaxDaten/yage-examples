@@ -1,4 +1,4 @@
-#version 330 core
+#version 410 core
 
 // in vec4 interpolated_color;
 
@@ -19,8 +19,8 @@ void main()
     // for (int x = -(size.x); x <= (size.x); x++)
     //     for (int y = -(size.y); y <= (size.y); y++)
     //         sum += texture(
-    //             texture,
-    //             vec2(vertex_uv.x + x * blurSizeH, vertex_uv.y + y * blurSizeV)
+    //             screen_texture,
+    //             vec2(VertexTex.x + x * blurSizeH, VertexTex.y + y * blurSizeV)
     //         ) / blurArea;
     // pixelColor = sum;
 }
