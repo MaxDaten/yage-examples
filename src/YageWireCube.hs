@@ -65,8 +65,8 @@ mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () Cub
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
     camera    <- cameraMovement . cameraRotation -< fpsCamera
-    --lightPos  <- arr (\t-> V3 (sin t * 1) 0 (cos t * 1)) . arr (/2) . time -< () 
-    lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
+    lightPos  <- arr (\t-> V3 (sin t * 1) 0 (cos t * 1)) . arr (/2) . time -< () 
+    --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
     returnA -< CubeView camera
                     (Cube 1 cubeRot 1)

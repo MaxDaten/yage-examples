@@ -1,8 +1,9 @@
 #version 410 core
 
 // in vec4 interpolated_color;
-
+#define ZBUFFER_DEPTH 1
 uniform vec2 ZNearFar;
+uniform vec2 ZProjRatio;
 
 uniform sampler2D AlbedoTexture;
 uniform sampler2D NormalTexture;
@@ -23,15 +24,13 @@ const float specular_exponent = 15.0;
 
 float zNear = ZNearFar.x;
 float zFar = ZNearFar.y;
-vec2 projRatio = vec2( zFar / (zFar - zNear)
-                     , (-zFar * zNear) / (zFar - zNear)
-                     );
+
 
 layout (location = 0) out vec4 pixelColor;
 
 float LinearDepth (float z)
 {
-    return (projRatio.y / (z - projRatio.x));
+    return (ZProjRatio.y / (z - ZProjRatio.x));
 }
 
 void main()
@@ -47,8 +46,16 @@ void main()
 
     // distance from view position (View)
     // float zzz = ;
+
+    #ifdef ZBUFFER_DEPTH
     float depth             = texture(DepthTexture, st).x;
     float linearDepth       = LinearDepth(depth);
+    vec3 viewRay            = vec3(VertexPosVS.xy / VertexPosVS.z, 1.0);
+    #else
+    DepthTexture;
+    float linearDepth       = albedoCh.a;
+    vec3 viewRay            = vec3(VertexPosVS.xy * (zFar / VertexPosVS.z), zFar);
+    #endif
 
     // retrieve the normal of the lit pixel
     vec3 normalVS  = texture( NormalTexture, st ).rgb * 2.0 - 1.0;
@@ -58,7 +65,6 @@ void main()
     // vec3 light_pos_View = lightPosition;
 
     // extrapolate the View space position of the pixel to the zFar plane
-    vec3 viewRay        = vec3(VertexPosVS.xy / VertexPosVS.z, 1.0);
     vec3 pixelPosVS     = viewRay * linearDepth;
     
     // direction from the lit pixel to the light source
@@ -75,7 +81,7 @@ void main()
     }
 
     float dist_2d = distance (lightPosVS, pixelPosVS);
-    float atten_factor = 1.0/(1.0 + dist_2d + 0.2 * dist_2d * dist_2d);
+    float atten_factor = 1.0/(1.0 + dist_2d + 1 * dist_2d * dist_2d);
     pixelColor =  vec4( atten_factor * pixel_albedo * (
                  lightAmbientColor.rgb 
                + lambertian * lightDiffuseColor.rgb 
