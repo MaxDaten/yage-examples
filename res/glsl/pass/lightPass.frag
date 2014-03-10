@@ -14,13 +14,17 @@ uniform vec3 lightRadius;
 uniform vec4 lightSpecularColor;
 uniform vec4 lightDiffuseColor;
 uniform vec4 lightAmbientColor;
+// x = constant, y = linear, z = quadric
+uniform vec3 lightAttenuation;
+uniform float lightSpecularExp;
 
 uniform ivec2 ViewportDim;
 
 in mat4 ViewSpace;
 in vec3 VertexPosVS;
 
-const float specular_exponent = 15.0;
+const float specular_exponent = 80.0;
+const float f0 = pow((1.0-(1.0/1.31)), 2)/pow((1.0+(1.0/1.31)), 2); 
 
 float zNear = ZNearFar.x;
 float zFar = ZNearFar.y;
@@ -31,6 +35,13 @@ layout (location = 0) out vec4 pixelColor;
 float LinearDepth (float z)
 {
     return (ZProjRatio.y / (z - ZProjRatio.x));
+}
+
+float Fresnel( vec3 halfDir, vec3 viewDir, float f0 );
+
+float saturate(float value)
+{
+    return clamp(value, 0.0, 1.0);
 }
 
 void main()
@@ -62,34 +73,44 @@ void main()
 
     // world light position to View space
     vec3 lightPosVS = vec3(ViewSpace * vec4(lightPosition, 1.0));
-    // vec3 light_pos_View = lightPosition;
 
     // extrapolate the View space position of the pixel to the zFar plane
     vec3 pixelPosVS     = viewRay * linearDepth;
     
     // direction from the lit pixel to the light source
-    vec3 toLightDir = normalize(lightPosVS - pixelPosVS);
+    vec3 pixToLight = lightPosVS - pixelPosVS;
+    float dist   = length(pixToLight);
+    vec3 toLightDir = pixToLight / dist;
 
-    float lambertian = clamp(dot(normalVS, toLightDir), 0.0, 1.0);
+    float lambertian = saturate(dot(normalVS, toLightDir));
     float specular = 0.0;
     if (lambertian > 0.0) {
         // direction from pixel to View
         vec3 viewDir    = normalize(-pixelPosVS);
         vec3 halfDir    = normalize(toLightDir + viewDir);
-        float specAngle = clamp(dot(halfDir, normalVS), 0.0, 1.0);
-        specular = pow(specAngle, specular_exponent);
+        float specAngle = saturate(dot(halfDir, normalVS));
+
+        specular = pow(specAngle, lightSpecularExp);
     }
 
-    float dist_2d = distance (lightPosVS, pixelPosVS);
-    float atten_factor = 1.0/(1.0 + dist_2d + 1 * dist_2d * dist_2d);
-    pixelColor =  vec4( atten_factor * pixel_albedo * (
-                 lightAmbientColor.rgb 
-               + lambertian * lightDiffuseColor.rgb 
-               + specular * lightSpecularColor.rgb
+    // float atten_factor = 1.0/(lightAttenuation.x + lightAttenuation.y * dist_2d + lightAttenuation.z * dist_2d * dist_2d);
+    float curve = min(pow(dist / lightRadius.x, 6.0), 1.0);
+    float atten_factor = mix(1.0 / (lightAttenuation.x + lightAttenuation.y * dist + lightAttenuation.z * dist * dist), 0.0, curve);
+    pixelColor =  vec4( pixel_albedo * (
+                 // lightAmbientColor.rgb 
+               atten_factor * ( lambertian * lightDiffuseColor.rgb 
+                              + specular * lightSpecularColor.rgb )
                ), 1.0);
 
-    lightPosition;    
-    lightRadius;    
-    lightSpecularColor;    
+    lightRadius; 
+    lightAmbientColor;   
 }
 
+/*
+float Fresnel( vec3 halfDir, vec3 viewDir, float f0 )
+{
+    float base = 1 - dot(viewDir, halfDir);
+    float exponential = pow(base, 5.0);
+    return exponential + f0 * (1.0 - exponential);
+}
+*/
