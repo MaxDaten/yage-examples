@@ -40,7 +40,8 @@ settings = WindowConfig
 data CubeView = CubeView
     { _viewCamera     :: CameraHandle
     , _theCube        :: !Cube
-    , _lightPos       :: !(V3 Float)
+    , _lightPosRed    :: !(V3 Float)
+    , _lightPosBlue   :: !(V3 Float)
     }
     deriving (Show)
 
@@ -65,12 +66,14 @@ mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () Cub
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
     camera    <- cameraMovement . cameraRotation -< fpsCamera
-    lightPos  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/3) . time -< () 
+    lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
+    lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
     --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
     returnA -< CubeView camera
                     (Cube 1 cubeRot 1)
-                    (lightPos)
+                    (lightPosRed)
+                    (lightPosBlue)
 
     where
 
@@ -184,13 +187,15 @@ instance HasScene CubeView GeoVertex LitVertex where
                                                     --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
                                                     , TextureDefinition (1, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent.jpg")
                                                     ]
-            frontPLAttr = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 1 0 2) 15
-            backPLAttr  = LightAttributes 0 (V4 0.5 0.5 1 1) (V4 0.3 0.3 0.3 1) (V3 1 0 1) 30
-            movingAttr  = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 0 3) 90 
+            frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 1 0 2) 15
+            backPLAttr      = LightAttributes 0 (V4 0.5 0.5 1 1) (V4 0.3 0.3 0.3 1) (V3 1 0 1) 30
+            movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
+            movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
             
-            frontPLight  = mkLight $ Light (Pointlight ((V3 0 0.5 0.5)) 2) frontPLAttr
-            backPLight   = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
-            movingPLight = mkLight $ Light (Pointlight (realToFrac <$> _lightPos) 0.5) movingAttr
+            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 0.5)) 2) frontPLAttr
+            backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
+            movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
+            movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
         in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
             --`addEntity` boxE
             --`addEntity` sphereE
@@ -200,5 +205,6 @@ instance HasScene CubeView GeoVertex LitVertex where
             `addEntity` objE
             `addLight` frontPLight
             `addLight` backPLight
-            `addLight` movingPLight
+            `addLight` movingPLightRed
+            `addLight` movingPLightBlue
             

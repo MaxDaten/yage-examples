@@ -18,7 +18,8 @@ layout (location = 1) out vec4 normalOut;
 // layout (location = 2) out vec3 specularOut;
 // layout (location = 3) out vec3 glossyOut;
 
-vec3 bumpNormal (vec2 texCoord);
+vec3 BumpNormal (vec2 texCoord);
+vec3 EncodeNormal (vec3 normal3d);
 
 void main()
 {
@@ -33,12 +34,17 @@ void main()
     // needed to move the tangents from tangent space to object space
     mat3 tbn       = mat3(tangent, bitangent, normal);
 
-    normalOut.rgb   = tbn * bumpNormal(VertexTex) * 0.5 + 0.5;
+    normalOut.rgb   = EncodeNormal(tbn * BumpNormal(VertexTex));
     normalOut.a     = 1;
 }
 
+vec3 EncodeNormal (vec3 normal3d)
+{
+    return normal3d.xyz * 0.5 + 0.5;
+}
 
-vec3 bumpNormal(vec2 texCoord)
+
+vec3 BumpNormal(vec2 texCoord)
 {
     vec3 bump;
     bump.xy = 2.0 * texture(NormalTexture, texCoord).gr - 1.0;
