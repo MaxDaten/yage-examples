@@ -1,16 +1,18 @@
 #version 410 core
 
-uniform mat4 mvp_matrix         = mat4(0.0);
-uniform mat4 model_matrix       = mat4(0.0);
-uniform mat4 view_matrix        = mat4(0.0);
+uniform mat4 ViewMatrix        = mat4(0.0);
+uniform mat4 VPMatrix          = mat4(0.0);
+uniform mat4 ModelMatrix       = mat4(0.0);
 
-out mat4 ViewMatrix;
-out vec3 VertexPosition;
 in vec3 vposition;
 
+out mat4 ViewSpace;
+out vec3 VertexPosVS;
+
+mat4 MVPMatrix = VPMatrix * ModelMatrix;
 void main()
 {
-    VertexPosition = vec3(view_matrix * model_matrix * vec4(vposition, 1.0));
-    ViewMatrix     = view_matrix;
-    gl_Position    = mvp_matrix * vec4( vposition, 1.0 );
+    VertexPosVS     = vec3(ViewMatrix * ModelMatrix * vec4(vposition, 1.0));
+    ViewSpace       = ViewMatrix;
+    gl_Position     = MVPMatrix * vec4( vposition, 1.0 );
 }

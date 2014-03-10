@@ -65,7 +65,8 @@ mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () Cub
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
     camera    <- cameraMovement . cameraRotation -< fpsCamera
-    lightPos  <- arr (\t-> V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
+    --lightPos  <- arr (\t-> V3 (sin t * 1) 0 (cos t * 1)) . arr (/2) . time -< () 
+    lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
     returnA -< CubeView camera
                     (Cube 1 cubeRot 1)
@@ -175,15 +176,16 @@ instance HasScene CubeView GeoVertex LitVertex where
             --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/square.obj") (undefined))
             --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/cube.obj") (undefined))
             objE        = objEntity (YGMResource ("res" </> "model" </> "head.ygm") (undefined))
-                            & entityPosition     .~ V3 0 0.5 0
+            --objE        = objEntity (YGMResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/Infinite-Level_02.ygm") (undefined))
+                            & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
                             & textures           .~ [ TextureDefinition (0, "tex_albedo")  $ TextureFile ("res" </> "tex" </> "head_albedo.jpg")
-                                                    , TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
-                                                    --, TextureDefinition (2, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent.jpg")
+                                                    --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
+                                                    , TextureDefinition (1, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent.jpg")
                                                     ]
-            pLight01    = (mkLight $ Light (Pointlight (realToFrac <$> _lightPos) 0.8) (LightAttributes (V4 0.1 0.1 0.1 1) (V4 0.8 0.7 0.7 1) (V4 0.2 0.2 0.2 1) 2))
-        in emptyScene (Camera3D _viewCamera (CameraPlanes 0.0001 100) (deg2rad 75))
+            pLight01    = (mkLight $ Light (Pointlight (realToFrac <$> _lightPos) 1) (LightAttributes (V4 0.1 0.1 0.1 1) (V4 0.8 0.7 0.7 1) (V4 0.2 0.2 0.2 1) 2))
+        in emptyScene (Camera3D _viewCamera (CameraPlanes (0.1) (10)) (deg2rad 75))
             --`addEntity` boxE
             --`addEntity` sphereE
             --`addEntity` coneE

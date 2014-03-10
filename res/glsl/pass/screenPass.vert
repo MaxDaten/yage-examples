@@ -4,8 +4,8 @@
 in vec3 vposition;
 in vec2 vtexture;
 
-uniform mat4 projection_matrix  = mat4(0.0);
-uniform mat4 model_matrix       = mat4(0.0);
+uniform mat4 ProjMatrix     = mat4(0.0);
+uniform mat4 ModelMatrix    = mat4(0.0);
 
 out vec2 VertexTex;
 out vec4 VertexPos;
@@ -13,7 +13,7 @@ out vec4 VertexPos;
 void main()
 {
     
-    VertexPos   = projection_matrix * model_matrix * vec4(vposition, 1.0);
+    VertexPos   = ProjMatrix * ModelMatrix * vec4(vposition, 1.0);
     
     VertexTex   = vtexture;
 
