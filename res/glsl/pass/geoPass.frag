@@ -6,6 +6,10 @@ uniform float ZFar;
 
 uniform sampler2D AlbedoTexture;
 uniform sampler2D NormalTexture;
+uniform int Textured;
+
+uniform vec3 MaterialColor;
+uniform float MaterialSpecular;
 
 in vec3 VertexPos;
 in vec2 VertexTex;
@@ -23,8 +27,11 @@ vec3 EncodeNormal (vec3 normal3d);
 
 void main()
 {
+    if (Textured == 1)
+        albedoOut.rgb   = texture(AlbedoTexture, VertexTex).xyz;
+    else
+        albedoOut.rgb   = MaterialColor.rgb;
 
-    albedoOut.rgb   = texture(AlbedoTexture, VertexTex).xyz;
     albedoOut.a     = VertexPos.z / ZFar;
 
     vec3 normal    = normalize(VertexNormal);
@@ -36,6 +43,7 @@ void main()
 
     normalOut.rgb   = EncodeNormal(tbn * BumpNormal(VertexTex));
     normalOut.a     = 1;
+    MaterialSpecular;
 }
 
 vec3 EncodeNormal (vec3 normal3d)
@@ -46,8 +54,12 @@ vec3 EncodeNormal (vec3 normal3d)
 
 vec3 BumpNormal(vec2 texCoord)
 {
+    vec2 normalColor = vec2(0.5, 0.5);
+    if (Textured == 1)
+        normalColor = texture(NormalTexture, texCoord).rg;
+    
     vec3 bump;
-    bump.xy = 2.0 * texture(NormalTexture, texCoord).gr - 1.0;
+    bump.xy = 2.0 * normalColor - 1.0;
     bump.z  = sqrt(1.0 - bump.x * bump.x - bump.y * bump.y);
     // bump = 2.0 * texture(tex_normal, texCoord).rgb - 1.0;
     return normalize(bump);

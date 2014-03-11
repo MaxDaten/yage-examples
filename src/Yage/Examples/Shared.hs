@@ -7,12 +7,13 @@ module Yage.Examples.Shared
 import Yage.Prelude hiding (Text)
 
 
-import Yage.Rendering hiding (P3, P3N3, P3T2, _renderData, _renderMode)
+import Yage.Rendering hiding (P3, P3N3, P3T2, _renderData, _drawSettings)
 import Yage.Scene
+import Yage.Material
 import Yage.Rendering.Transformation
---import Yage.Primitives
+import Yage.Primitives
 import Yage.Resources
---import "yage" Yage.Geometry
+import "yage" Yage.Geometry
 
 
 ---------------------------------------------------------------------------------------------------
@@ -49,36 +50,38 @@ pyramidEntity =
         , _transformation = idTransformation
         }
 
-
-boxEntity :: SceneEntity P3N3
-boxEntity =
-    let mesh      = (vertices . triangles $ normalCalculator FacetteNormals $ cube 1) :: [Vertex P3N3]
-    in SceneEntity 
-        { _renderData     = Right $ makeMesh "box" mesh
-        , _textures       = [ TextureDefinition (0, "textures")
-                               (TextureFile ("res" </> "Brown_Leather_Texture.png"))
-                            ]
-        , _renderMode     = Triangles
-        , _transformation = idTransformation
-        }
-
-floorEntity :: SceneEntity P3N3
-floorEntity =
-    let mesh        = vertices . toLines $ normalCalculator FacetteNormals $ grid 25 1 :: [Vertex P3N3]
-    in SceneEntity 
-        { _renderData     = Right $ makeMesh "floor" mesh
-        , _textures       = []
-        , _renderMode     = Lines
-        , _transformation = idTransformation
-        }
 --}
+
+boxEntity :: SceneEntity P3TX2NT3
+boxEntity =
+    let mesh      = (vertices . triangles $ cube 1) :: [Vertex P3TX2NT3]
+    in SceneEntity 
+        { _renderData     = Right $ makeSimpleTriMesh "box" mesh
+        , _textures       = []
+        , _transformation = idTransformation
+        , _material       = Material (V3 0.3 0.3 0.3) 1
+        , _drawSettings   = GLDrawSettings Triangles (Just Back)
+        }
+
+floorEntity :: SceneEntity P3TX2NT3
+floorEntity =
+    let mesh        = vertices . triangles $ grid 25 1 :: [Vertex P3TX2NT3]
+    in SceneEntity 
+        { _renderData     = Right $ makeSimpleTriMesh "floor" mesh
+        , _textures       = []
+        , _transformation = idTransformation
+        , _material       = Material (V3 0.3 0.3 0.3) 1
+        , _drawSettings   = GLDrawSettings Triangles (Just Back)
+        }
+
 objEntity :: VertexResource a -> SceneEntity a
 objEntity res =
     SceneEntity
         { _renderData     = Left res
-        , _renderMode     = Triangles
         , _textures       = []
         , _transformation = idTransformation
+        , _material       = Material 0 1
+        , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
 {--

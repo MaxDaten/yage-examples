@@ -158,10 +158,10 @@ mainWire = proc () -> do
 instance HasScene CubeView GeoVertex LitVertex where
     getScene CubeView{..} = 
         let 
-            {--
             boxE        = boxEntity
                             & entityPosition    .~ V3 0 0 (-3) --(realToFrac <$> _theCube^.cubePosition)
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+            {--
             
             sphereE     = sphereEntity 2
                             & entityPosition    .~ V3 (-3) 0.5 0
@@ -173,35 +173,33 @@ instance HasScene CubeView GeoVertex LitVertex where
             pyramidE    = pyramidEntity
                             & entityPosition    .~ V3 0 0 3
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
-            floorE      = floorEntity & entityScale .~ 10
             --}
-            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ") (undefined))
-            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/square.obj") (undefined))
-            --objE        = objEntity (OBJResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/test/res/cube.obj") (undefined))
+            floorE      = floorEntity & entityScale .~ 10
+                                      & entityPosition .~ V3 0 (-1) 0
             objE        = objEntity (YGMResource ("res" </> "model" </> "head.ygm") (undefined))
             --objE        = objEntity (YGMResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/Infinite-Level_02.ygm") (undefined))
                             & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
-                            & textures           .~ [ TextureDefinition (0, "tex_albedo")  $ TextureFile ("res" </> "tex" </> "head_albedo.jpg")
+                            & textures           .~ [ TextureDefinition (0, "tex_albedo")  $ TextureFile ("res" </> "tex" </> "head_albedo_big.jpg")
                                                     --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
-                                                    , TextureDefinition (1, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent.jpg")
+                                                    , TextureDefinition (1, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent_big.jpg")
                                                     ]
-            frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 1 0 2) 15
-            backPLAttr      = LightAttributes 0 (V4 0.5 0.5 1 1) (V4 0.3 0.3 0.3 1) (V3 1 0 1) 30
+            frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
+            backPLAttr      = LightAttributes 0 (V4 0.5 0.5 0.8 1) (V4 0.3 0.3 0.3 1) (V3 1 0 (1/128.0)) 30
             movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
             movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
             
-            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 0.5)) 2) frontPLAttr
+            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 2)) 5) frontPLAttr
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
         in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
-            --`addEntity` boxE
+            `addEntity` boxE
             --`addEntity` sphereE
             --`addEntity` coneE
             --`addEntity` pyramidE
-            --`addEntity` floorE
+            `addEntity` floorE
             `addEntity` objE
             `addLight` frontPLight
             `addLight` backPLight

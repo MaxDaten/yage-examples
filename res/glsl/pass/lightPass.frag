@@ -23,8 +23,6 @@ uniform ivec2 ViewportDim;
 in mat4 ViewSpace;
 in vec3 VertexPosVS;
 
-const float specular_exponent = 80.0;
-const float f0 = pow((1.0-(1.0/1.31)), 2)/pow((1.0+(1.0/1.31)), 2); 
 
 float zNear = ZNearFar.x;
 float zFar = ZNearFar.y;
@@ -37,6 +35,7 @@ float LinearDepth (float z)
     return (ZProjRatio.y / (z - ZProjRatio.x));
 }
 
+const float f0 = pow((1.0-(1.0/1.31)), 2)/pow((1.0+(1.0/1.31)), 2); 
 float Fresnel( vec3 halfDir, vec3 viewDir, float f0 );
 
 float saturate(float value)
@@ -96,8 +95,7 @@ void main()
     // float atten_factor = 1.0/(lightAttenuation.x + lightAttenuation.y * dist_2d + lightAttenuation.z * dist_2d * dist_2d);
     float curve = min(pow(dist / lightRadius.x, 6.0), 1.0);
     float atten_factor = mix(1.0 / (lightAttenuation.x + lightAttenuation.y * dist + lightAttenuation.z * dist * dist), 0.0, curve);
-    pixelColor =  vec4( pixel_albedo * (
-                 // lightAmbientColor.rgb 
+    pixelColor =  vec4( (pixel_albedo + lightAmbientColor.rgb) * (
                atten_factor * ( lambertian * lightDiffuseColor.rgb 
                               + specular * lightSpecularColor.rgb )
                ), 1.0);
