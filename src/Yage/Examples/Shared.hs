@@ -12,7 +12,6 @@ import Yage.Scene
 import Yage.Material
 import Yage.Rendering.Transformation
 import Yage.Primitives
-import Yage.Resources
 import "yage" Yage.Geometry
 
 
@@ -82,6 +81,17 @@ objEntity res =
         , _transformation = idTransformation
         , _material       = Material 0 1
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
+        }
+
+skydome :: CubeMap FilePath -> Sky
+skydome texs = 
+    let mesh = vertices . triangles $ geoSphere 2 10 :: [Vertex P3]
+    in Sky
+        { _skyVolume         = makeSimpleTriMesh "SkyDome" mesh
+        , _skyTexture        = Left <$> texs
+        , _skyTransformation = idTransformation
+        , _skyDrawSettings   = GLDrawSettings Triangles (Just Back)
+        , _skyIntensity      = 0
         }
 
 {--

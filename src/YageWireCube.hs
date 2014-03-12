@@ -10,7 +10,7 @@
 module Main where
 
 import Yage
-import Yage.Lens
+import Yage.Lens hiding ((<.>))
 import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
@@ -174,33 +174,41 @@ instance HasScene CubeView GeoVertex LitVertex where
                             & entityPosition    .~ V3 0 0 3
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
             --}
-            floorE      = floorEntity & entityScale .~ 10
+            floorE      = floorEntity & entityScale .~ 100
                                       & entityPosition .~ V3 0 (-1) 0
             objE        = objEntity (YGMResource ("res" </> "model" </> "head.ygm") (undefined))
-            --objE        = objEntity (YGMResource ("/Users/jloos/Workspace/hs/yage-meta/yage-geometry/Infinite-Level_02.ygm") (undefined))
                             & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
-                            & textures           .~ [ TextureDefinition (0, "tex_albedo")  $ TextureFile ("res" </> "tex" </> "head_albedo_big.jpg")
+                            & textures           .~ [ Left ("res" </> "tex" </> "head" </> "small" </> "head_albedo.jpg")
                                                     --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
-                                                    , TextureDefinition (1, "tex_tangent") $ TextureFile ("res" </> "tex" </> "head_tangent_big.jpg")
+                                                    , Left ("res" </> "tex" </> "head" </> "small" </> "head_tangent.jpg")
                                                     ]
             frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
             backPLAttr      = LightAttributes 0 (V4 0.5 0.5 0.8 1) (V4 0.3 0.3 0.3 1) (V3 1 0 (1/128.0)) 30
-            movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
-            movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 3) 15 
+            movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
+            movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
             
             frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 2)) 5) frontPLAttr
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
-        in emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
+
+            envPath         = "res" </> "tex" </> "env" </> "Space" </> "small"
+            ext             = "png"
+            cubeFile file   = envPath </> file <.> ext
+            sky             = skydome $ CubeMap { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
+                                                , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
+                                                , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
+                                                }
+        in (emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) & (sceneSky ?~ (sky & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 1)))
             `addEntity` boxE
             --`addEntity` sphereE
             --`addEntity` coneE
             --`addEntity` pyramidE
-            `addEntity` floorE
+            --`addEntity` floorE
             `addEntity` objE
+            
             `addLight` frontPLight
             `addLight` backPLight
             `addLight` movingPLightRed
