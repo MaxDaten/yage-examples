@@ -17,6 +17,7 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.Light
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 
@@ -155,17 +156,29 @@ mainWire = proc () -> do
 instance HasScene CubeView GeoVertex LitVertex where
     getScene CubeView{..} = 
         let 
-            boxE        = boxEntity
-                            & entityPosition    .~ (realToFrac <$> _theCube^.cubePosition)
+            objE        = objEntity (YGMResource ("res" </> "model" </> "head.ygm") (undefined))
+                            & entityPosition     .~ V3 0 0.5 (-0.5)
+                            & entityScale        *~ 5
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & textures           .~ [ Left ("res" </> "tex" </> "head" </> "big" </> "head_albedo.jpg")
+                                                    --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
+                                                    , Left ("res" </> "tex" </> "head" </> "big" </> "head_tangent.jpg")
+                                                    ]
+            frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
+            backPLAttr      = LightAttributes 0 (V4 0.5 0.5 0.8 1) (V4 0.3 0.3 0.3 1) (V3 1 0 (1/128.0)) 30
+            movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
+            movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
+            
+            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 2)) 5) frontPLAttr
+            backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
+            movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
+            movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
 
-            envPath         = "res" </> "tex" </> "env" </> "Space" </> "small"
-            ext             = "png"
-            cubeFile file   = envPath </> file <.> ext
-            sky             = skydome $ CubeMap { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
-                                                , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
-                                                , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
-                                                }
-        in (emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) & (sceneSky ?~ (sky & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 0.5)))
-            `addEntity` boxE
+        in (emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)))
+            `addEntity` objE
+            
+            `addLight` frontPLight
+            `addLight` backPLight
+            `addLight` movingPLightRed
+            `addLight` movingPLightBlue
             
