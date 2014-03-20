@@ -113,8 +113,9 @@ instance HasScene CubeView GeoVertex LitVertex where
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
-
-        in (emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)))
+            theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
+                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+        in theScene
             `addEntity` objE
             
             `addLight` frontPLight
