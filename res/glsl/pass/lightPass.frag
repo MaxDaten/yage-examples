@@ -11,9 +11,7 @@ uniform sampler2D DepthTexture;
 
 uniform vec3 lightPosition;    
 uniform vec3 lightRadius;    
-uniform vec4 lightSpecularColor;
-uniform vec4 lightDiffuseColor;
-uniform vec4 lightAmbientColor;
+uniform vec4 lightColor;
 // x = constant, y = linear, z = quadric
 uniform vec3 lightAttenuation;
 uniform float lightSpecularExp;
@@ -78,7 +76,7 @@ void main()
     
     // direction from the lit pixel to the light source
     vec3 pixToLight = lightPosVS - pixelPosVS;
-    float dist   = length(pixToLight);
+    float dist      = length(pixToLight);
     vec3 toLightDir = pixToLight / dist;
 
     float lambertian = saturate(dot(normalVS, toLightDir));
@@ -95,13 +93,10 @@ void main()
     // float atten_factor = 1.0/(lightAttenuation.x + lightAttenuation.y * dist_2d + lightAttenuation.z * dist_2d * dist_2d);
     float curve = min(pow(dist / lightRadius.x, 6.0), 1.0);
     float atten_factor = mix(1.0 / (lightAttenuation.x + lightAttenuation.y * dist + lightAttenuation.z * dist * dist), 0.0, curve);
-    pixelColor =  vec4( (pixel_albedo + lightAmbientColor.rgb) * (
-               atten_factor * ( lambertian * lightDiffuseColor.rgb 
-                              + specular * lightSpecularColor.rgb )
+    pixelColor =  vec4( pixel_albedo * (
+               atten_factor * ( lambertian * lightColor.rgb 
+                              + specular * lightColor.rgb )
                ), 1.0);
-
-    lightRadius; 
-    lightAmbientColor;   
 }
 
 /*

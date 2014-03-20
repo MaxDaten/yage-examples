@@ -17,7 +17,6 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
-import Yage.Light
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 
@@ -59,11 +58,13 @@ camStartPos :: V3 Float
 camStartPos = V3 0 0 2
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
+cameraKeys :: MovementKeys
+cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
-    camera    <- cameraMovement . cameraRotation -< fpsCamera
+    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< fpsCamera
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
     --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
@@ -77,77 +78,16 @@ mainWire = proc () -> do
 
     cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
     cubeRotationByInput =
-       smoothRotationByKey ( yAxis ) Key'Right 
-     . smoothRotationByKey (-yAxis ) Key'Left
-     . smoothRotationByKey ( xAxis ) Key'Up
-     . smoothRotationByKey (-xAxis ) Key'Down 
-     . 1
-
-
-
-    cameraMovement :: (Real t) => YageWire t (CameraHandle) (CameraHandle)
-    cameraMovement =
-        let acc         = 2
-            toLeft      = -xAxis
-            toRight     =  xAxis
-            forward     = -zAxis
-            backward    =  zAxis
-        in proc cam -> do
-            leftA      <- pure ( toLeft   ) . whileKeyDown Key'A <|> 0 -< ()
-            rightA     <- pure ( toRight  ) . whileKeyDown Key'D <|> 0 -< ()
-            forwardA   <- pure ( forward  ) . whileKeyDown Key'W <|> 0 -< ()
-            backwardA  <- pure ( backward ) . whileKeyDown Key'S <|> 0 -< ()
-            let trans  = leftA + rightA + forwardA + backwardA
-                r      = (cam^.cameraOrientation)
-            transV  <- integral camStartPos -< acc *^ normalize $ r `rotate` trans 
-            returnA -< (cam & cameraLocation .~ transV)
-
-
-    cameraRotation :: (Real t) => YageWire t (CameraHandle) (CameraHandle)
-    cameraRotation =
-        proc cam -> do
-            velV <- arr ((-mouseSensitivity) * ) . (whileKeyDown Key'LeftShift . mouseVelocity <|> 0) -< () -- counter clock wise
-            x    <- integral 0                   -< velV^._x
-            y    <- integrateBounded (-90, 90) 0 -< velV^._y
-            returnA -< cam `pan`  x
-                           `tilt` y
-
-
-
-
-    smoothTranslation :: (Real t)
-                      => V3 Float -> Float -> Float -> Key -> YageWire t (V3 Float) (V3 Float)
-    smoothTranslation dir acc att key =
-        let trans = integral 0 . arr (signorm dir ^*) . velocity acc att key
-        in proc inTransV -> do
-            transV <- trans -< ()
-            returnA -< inTransV + transV 
-
-    velocity :: (Floating b, Ord b, Real t) 
-             => b -> b -> Key -> YageWire t a b
-    velocity !acc !att !trigger = 
-        integrateAttenuated att 0 . (pure acc . whileKeyDown trigger <|> 0)
-
-
-    smoothRotationByKey :: (Real t) 
-                        => V3 Float -> Key -> YageWire t (Quaternion Float) (Quaternion Float)
-    smoothRotationByKey !axis !key = 
         let acc         = 20
             att         = 0.87
-            angleVel    = velocity acc att key
-            rot         = axisAngle axis <$> integral 0 . angleVel
-        in proc inQ -> do
-            rotQ    <- rot -< ()
-            returnA -<  inQ * rotQ -- * conjugate rotQ
+        in 
+        smoothRotationByKey acc att ( yAxis ) Key'Right 
+      . smoothRotationByKey acc att (-yAxis ) Key'Left
+      . smoothRotationByKey acc att ( xAxis ) Key'Up
+      . smoothRotationByKey acc att (-xAxis ) Key'Down 
+      . 1
 
----------------------------------------------------------------------------------------------------
 
-
-    rotationByVelocity :: (Real t) => V3 Float -> V3 Float -> YageWire t (V2 Float) (Quaternion Float)
-    rotationByVelocity !xMap !yMap =
-        let applyOrientations   = arr (axisAngle xMap . (^._x)) &&& arr (axisAngle yMap . (^._y))
-            combineOrientations = arr (\(!qu, !qr) -> qu * qr)
-        in combineOrientations . applyOrientations . integral 0
 
 
 -------------------------------------------------------------------------------
@@ -164,10 +104,10 @@ instance HasScene CubeView GeoVertex LitVertex where
                                                     --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
                                                     , Left ("res" </> "tex" </> "head" </> "big" </> "head_tangent.jpg")
                                                     ]
-            frontPLAttr     = LightAttributes 0 (V4 1 0.9 0.9 1) (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
-            backPLAttr      = LightAttributes 0 (V4 0.5 0.5 0.8 1) (V4 0.3 0.3 0.3 1) (V3 1 0 (1/128.0)) 30
-            movingAttrRed   = LightAttributes 0 (V4 0.7 0.3 0.3 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
-            movingAttrBlue  = LightAttributes 0 (V4 0.3 0.3 0.7 1) (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
+            frontPLAttr     = LightAttributes (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
+            backPLAttr      = LightAttributes (V4 0.3 0.3 0.5 1) (V3 1 0 (1/128.0)) 30
+            movingAttrRed   = LightAttributes (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
+            movingAttrBlue  = LightAttributes (V4 0.2 0.2 0.4 1) (V3 1 1 (1/64.0)) 15 
             
             frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 2)) 5) frontPLAttr
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
