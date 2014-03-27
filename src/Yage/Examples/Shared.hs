@@ -58,7 +58,7 @@ boxEntity =
         { _renderData     = Right $ makeSimpleTriMesh "box" mesh
         , _textures       = []
         , _transformation = idTransformation
-        , _material       = Material (V3 0.3 0.3 0.3) 1
+        , _material       = Material (1) 1
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
@@ -69,7 +69,7 @@ floorEntity =
         { _renderData     = Right $ makeSimpleTriMesh "floor" mesh
         , _textures       = []
         , _transformation = idTransformation
-        , _material       = Material (V3 0.3 0.3 0.3) 1
+        , _material       = Material (1) 1
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
@@ -79,7 +79,7 @@ objEntity res =
         { _renderData     = Left res
         , _textures       = []
         , _transformation = idTransformation
-        , _material       = Material 0 1
+        , _material       = Material 1 1
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
