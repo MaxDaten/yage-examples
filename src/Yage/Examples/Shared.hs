@@ -55,7 +55,7 @@ boxEntity :: SceneEntity P3TX2NT3
 boxEntity =
     let mesh      = (vertices . triangles $ cube 1) :: [Vertex P3TX2NT3]
     in SceneEntity 
-        { _renderData     = Right $ makeSimpleTriMesh "box" mesh
+        { _renderData     = Right $ meshFromVertexList "box" mesh
         , _textures       = []
         , _transformation = idTransformation
         , _material       = Material (1) 1
@@ -66,7 +66,7 @@ floorEntity :: SceneEntity P3TX2NT3
 floorEntity =
     let mesh        = vertices . triangles $ grid 25 1 :: [Vertex P3TX2NT3]
     in SceneEntity 
-        { _renderData     = Right $ makeSimpleTriMesh "floor" mesh
+        { _renderData     = Right $ meshFromVertexList "floor" mesh
         , _textures       = []
         , _transformation = idTransformation
         , _material       = Material (1) 1
@@ -87,7 +87,7 @@ skydome :: CubeMap FilePath -> Sky
 skydome texs = 
     let mesh = vertices . triangles $ geoSphere 2 10 :: [Vertex P3]
     in Sky
-        { _skyVolume         = makeSimpleTriMesh "SkyDome" mesh
+        { _skyVolume         = meshFromVertexList "SkyDome" mesh
         , _skyTexture        = Left <$> texs
         , _skyTransformation = idTransformation
         , _skyDrawSettings   = GLDrawSettings Triangles (Just Back)
