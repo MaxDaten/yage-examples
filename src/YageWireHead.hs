@@ -96,7 +96,7 @@ mainWire = proc () -> do
 instance HasScene CubeView GeoVertex LitVertex where
     getScene CubeView{..} = 
         let 
-            objE        = objEntity ( YGMResource $ "res" </> "model" </> "head.ygm" )
+            objE        = objEntity ( YGMFile $ "res" </> "model" </> "head.ygm" )
                             & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)

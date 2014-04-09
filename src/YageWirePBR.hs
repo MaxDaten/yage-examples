@@ -88,16 +88,16 @@ mainWire = proc () -> do
 instance HasScene SphereView GeoVertex LitVertex where
     getScene SphereView{..} = 
         let 
-            sphereE         = objEntity ( OBJResource $ "res" </> "model" </> "sphere.obj" )
+            sphereE         = objEntity ( OBJFile $ "res" </> "model" </> "sphere.obj" )
                                 & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
 
             envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
             ext             = "png"
             cubeMapFile file= envPath </> file <.> ext
-            sky             = ( skydome $ CubeMap { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft  = cubeMapFile "negx"
-                                                  , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom= cubeMapFile "negy"
-                                                  , cubeFaceFront = cubeMapFile "posz", cubeFaceBack  = cubeMapFile "negz"
-                                                  }
+            sky             = ( skydome $ TextureCube { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft  = cubeMapFile "negx"
+                                                      , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom= cubeMapFile "negy"
+                                                      , cubeFaceFront = cubeMapFile "posz", cubeFaceBack  = cubeMapFile "negz"
+                                                      }
                               ) & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 0.8
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
                                 & sceneSky ?~ sky

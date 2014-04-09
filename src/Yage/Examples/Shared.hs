@@ -11,8 +11,8 @@ import Yage.Rendering hiding (P3, P3N3, P3T2, _renderData, _drawSettings)
 import Yage.Scene
 import Yage.Material
 import Yage.Rendering.Transformation
-import Yage.Primitives
 import "yage" Yage.Geometry
+import Yage.Geometry3D
 
 
 ---------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ floorEntity =
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
-objEntity :: VertexResource a -> SceneEntity a
+objEntity :: MeshFile a -> SceneEntity a
 objEntity res =
     SceneEntity
         { _renderData     = Left res
@@ -83,7 +83,7 @@ objEntity res =
         , _drawSettings   = GLDrawSettings Triangles (Just Back)
         }
 
-skydome :: CubeMap FilePath -> Sky
+skydome :: TextureCube FilePath -> Sky
 skydome texs = 
     let mesh = vertices . triangles $ geoSphere 2 10 :: [Vertex P3]
     in Sky

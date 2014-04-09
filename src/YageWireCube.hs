@@ -102,10 +102,10 @@ instance HasScene CubeView GeoVertex LitVertex where
             envPath         = "res" </> "tex" </> "env" </> "Space" </> "small"
             ext             = "png"
             cubeFile file   = envPath </> file <.> ext
-            sky             = ( skydome $ CubeMap { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
-                                                  , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
-                                                  , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
-                                                  }
+            sky             = ( skydome $ TextureCube { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
+                                                      , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
+                                                      , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
+                                                      }
                               ) & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 0.5
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
                                 & sceneSky ?~ sky
