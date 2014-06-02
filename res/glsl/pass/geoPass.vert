@@ -11,9 +11,8 @@ in vec4 vTangentX;
 in vec4 vTangentZ;
 
 out vec2 VertexUV;
-out vec3 VertexNormal;
-out vec3 VertexTangent;
 out vec3 VertexPos;
+out mat3 TBN;
 
 void main()
 {
@@ -23,9 +22,11 @@ void main()
     // flip vertical (t or v) because opengl's first row in an image is bottom left (instead of top left)
     // tangents are respected in the frag-shaders for NormalY calculation (cross arguments are flipped)
     VertexUV                = vec2(vTexture.s, 1 - vTexture.t); // TODO : move to CPU
-    VertexNormal            = normalize(mat3(ViewMatrix) * NormalMatrix * vTangentZ.xyz);
-    VertexTangent           = normalize(mat3(ViewMatrix) * NormalMatrix * (vTangentZ.w * vTangentX.xyz));
+    vec3 tangentZ           = normalize( mat3(ViewMatrix) * NormalMatrix * vTangentZ.xyz );
+    vec3 tangentX           = normalize( mat3(ViewMatrix) * NormalMatrix * vTangentX.xyz );
+    vec3 tangentY           = cross(tangentX, tangentZ) * vTangentZ.w;
     VertexPos               = vec3(MVMatrix * vec4(vPosition, 1.0));
+    TBN                     = transpose( mat3 ( tangentX, tangentY, tangentZ ) );
 
     gl_Position = MVPMatrix * vec4(vPosition, 1.0);
 }

@@ -13,8 +13,7 @@ uniform float Specular = 1;
 
 in vec3 VertexPos;
 in vec2 VertexUV;
-in vec3 VertexNormal;
-in vec3 VertexTangent;
+smooth in mat3 TBN;
 
 // Red Green Blue Depth
 layout (location = 0) out vec4 OutAlbedo;
@@ -36,9 +35,9 @@ vec3 DecodeNormal( vec3 normalC )
 
 vec3 GetBumpedNormal()
 {
-    vec2 NormalXY = DecodeNormal( NormalColor.rgb * texture( NormalTexture, VertexUV ).rgb ).rg;
+    vec2 NormalXY = DecodeNormal( texture( NormalTexture, VertexUV ).rgb ).rg;
     float NormalZ = sqrt(1.0 - dot( NormalXY, NormalXY ) );
-    return vec3( NormalXY, NormalZ );
+    return NormalColor.rgb * vec3( NormalXY, NormalZ );
 }
 
 
@@ -55,13 +54,6 @@ void main()
 
     OutAlbedo.a     = VertexPos.z / ZFar;
 
-    vec3 NormalZ    = normalize( VertexNormal );
-    vec3 NormalX    = normalize( VertexTangent );
-    // normally cross( NormalX, NormalZ ); but we flipped our normal for textures
-    vec3 NormalY    = cross( NormalX, NormalZ ); 
-
-    // needed to move the tangents from tangent space to object space
-    mat3 TBN       = mat3( NormalX, NormalY, NormalZ );
 
     OutNormal.rgb   = EncodeNormal( TBN * GetBumpedNormal() );
     OutNormal.a     = 1;
