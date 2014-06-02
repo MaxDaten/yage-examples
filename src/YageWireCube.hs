@@ -17,11 +17,13 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import qualified Yage.Resources as Res
+import qualified Yage.Material  as Mat
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 
-settings :: WindowConfig
-settings = WindowConfig
+winSettings :: WindowConfig
+winSettings = WindowConfig
     { windowSize = (800, 600)
     , windowHints = 
         [ WindowHint'ContextVersionMajor  4
@@ -33,6 +35,10 @@ settings = WindowConfig
         --, WindowHint'Decorated            False
         ]
      }
+
+
+appConf :: ApplicationConfig
+appConf = defaultAppConfig{ logPriority = WARNING }
 
 data CubeView = CubeView
     { _viewCamera     :: CameraHandle
@@ -52,7 +58,7 @@ makeLenses ''Cube
 
 
 main :: IO ()
-main = yageMain "yage-cube" settings mainWire (1/60)
+main = yageMain "yage-cube" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
 camStartPos = V3 0 0 2
@@ -92,24 +98,38 @@ mainWire = proc () -> do
 -------------------------------------------------------------------------------
 -- View Definition
 
-instance HasScene CubeView GeoVertex LitVertex where
-    getScene CubeView{..} = 
-        let 
-            boxE        = boxEntity
+
+type SceneEntity      = GeoEntityRes
+type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+
+simToRender :: CubeView -> Scene SceneEntity SceneEnvironment 
+simToRender CubeView{..} = 
+        let texDir      = "res" </> "tex"
+            ext         = "png"
+            boxE        = ( boxEntity :: GeoEntityRes )
+                            -- & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
                             & entityPosition    .~ (realToFrac <$> _theCube^.cubePosition)
                             & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
+                            & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
+                            -- & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg")
+                            -- & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg")
+            frontLight  = Light ( Pointlight (0 & _z .~ 1.5) 2 ) ( LightAttributes (V4 0.4 0.4 0.4 1) (V3 0 1 (1/64.0)) 15 )
 
-            envPath         = "res" </> "tex" </> "env" </> "Space" </> "small"
-            ext             = "png"
+            envPath         = texDir </> "env" </> "Space" </> "small"
             cubeFile file   = envPath </> file <.> ext
-            sky             = ( skydome $ TextureCube { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
-                                                      , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
-                                                      , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
-                                                      }
-                              ) & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 0.5
+            skyCubeMap      = Res.TextureFile <$> Mat.Cube  
+                                { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
+                                , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
+                                , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
+                                }
+            sky             = ( skydome $ Mat.Material ( Mat.opaque Mat.white ) skyCubeMap )
+                                & transformation.transPosition .~ _viewCamera^.cameraLocation
+
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
                                 & sceneSky ?~ sky
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene
             `addEntity` boxE
+            `addLight` ( mkLight frontLight )
             

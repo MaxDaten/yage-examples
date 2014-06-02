@@ -7,11 +7,12 @@ uniform float ZFar;
 uniform sampler2D AlbedoTexture;
 uniform sampler2D NormalTexture;
 
-uniform vec4 BaseColor = vec4(1, 1, 1, 1);
+uniform vec4 AlbedoColor;
+uniform vec4 NormalColor;
 uniform float Specular = 1;
 
 in vec3 VertexPos;
-in vec2 VertexTex;
+in vec2 VertexUV;
 in vec3 VertexNormal;
 in vec3 VertexTangent;
 
@@ -23,19 +24,19 @@ layout (location = 1) out vec4 OutNormal;
 
 vec4 GetAlbedoColor()
 {
-    return BaseColor * texture( AlbedoTexture, VertexTex );
+    return AlbedoColor * texture( AlbedoTexture, VertexUV );
 }
 
 
-vec3 DecodeNormal( vec3 NormalColor )
+vec3 DecodeNormal( vec3 normalC )
 {
-    return 2.0 * NormalColor - 1.0;
+    return 2.0 * normalC - 1.0;
 }
 
 
 vec3 GetBumpedNormal()
 {
-    vec2 NormalXY = DecodeNormal( texture( NormalTexture, VertexTex ).rgb ).rg;
+    vec2 NormalXY = DecodeNormal( NormalColor.rgb * texture( NormalTexture, VertexUV ).rgb ).rg;
     float NormalZ = sqrt(1.0 - dot( NormalXY, NormalXY ) );
     return vec3( NormalXY, NormalZ );
 }
@@ -50,12 +51,14 @@ vec3 EncodeNormal( vec3 Normal3d )
 void main()
 {
     OutAlbedo.rgb   = GetAlbedoColor().rgb;
+    // OutAlbedo.rgb   = AlbedoColor.rgb;
 
     OutAlbedo.a     = VertexPos.z / ZFar;
 
     vec3 NormalZ    = normalize( VertexNormal );
     vec3 NormalX    = normalize( VertexTangent );
-    vec3 NormalY    = cross( NormalZ, NormalX );
+    // normally cross( NormalX, NormalZ ); but we flipped our normal for textures
+    vec3 NormalY    = cross( NormalX, NormalZ ); 
 
     // needed to move the tangents from tangent space to object space
     mat3 TBN       = mat3( NormalX, NormalY, NormalZ );

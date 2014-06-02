@@ -3,7 +3,7 @@
 // in vec4 interpolated_color;
 
 uniform sampler2D ScreenTexture;
-in vec2 VertexTex;
+in vec2 VertexUV;
 
 layout (location = 0) out vec4 pixelColor;
 
@@ -16,6 +16,6 @@ vec3 LinearToneMapping(vec3 color)
 
 void main()
 {
-    pixelColor = texture( ScreenTexture, VertexTex );
+    pixelColor = texture( ScreenTexture, VertexUV );
 }
 

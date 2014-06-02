@@ -15,13 +15,15 @@ import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
 
-import Yage.Camera
-import Yage.Scene
-import Yage.Pipeline.Deferred
-import Yage.Examples.Shared
+import           Yage.Camera
+import           Yage.Scene
+import qualified Yage.Resources as Res
+import           Yage.Material            hiding (Cube)
+import           Yage.Pipeline.Deferred
+import           Yage.Examples.Shared
 
-settings :: WindowConfig
-settings = WindowConfig
+winSettings :: WindowConfig
+winSettings = WindowConfig
     { windowSize = (800, 600)
     , windowHints = 
         [ WindowHint'ContextVersionMajor  4
@@ -52,7 +54,7 @@ makeLenses ''Cube
 
 
 main :: IO ()
-main = yageMain "yage-cube" settings mainWire (1/60)
+main = yageMain "yage-cube" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
 camStartPos = V3 0 0 2
@@ -92,18 +94,21 @@ mainWire = proc () -> do
 
 -------------------------------------------------------------------------------
 -- View Definition
+type SceneEntity      = GeoEntityRes
+type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-instance HasScene CubeView GeoVertex LitVertex where
-    getScene CubeView{..} = 
+simToRender :: CubeView -> Scene SceneEntity SceneEnvironment 
+simToRender CubeView{..} = 
         let 
-            objE        = objEntity ( YGMFile $ "res" </> "model" </> "head.ygm" )
+            texDir      = "res" </> "tex"
+            objE        = (basicEntity :: GeoEntityRes)
+                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
                             & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
-                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
-                            & textures           .~ [ Left ("res" </> "tex" </> "head" </> "big" </> "head_albedo.jpg")
-                                                    --, TextureDefinition (1, "tex_normal")  $ TextureFile ("res" </> "tex" </> "head_normal.jpg")
-                                                    , Left ("res" </> "tex" </> "head" </> "big" </> "head_tangent.jpg")
-                                                    ]
+                            & entityOrientation  .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg" ) 
+                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg" )
+
             frontPLAttr     = LightAttributes (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
             backPLAttr      = LightAttributes (V4 0.3 0.3 0.5 1) (V3 1 0 (1/128.0)) 30
             movingAttrRed   = LightAttributes (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
@@ -114,7 +119,7 @@ instance HasScene CubeView GeoVertex LitVertex where
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.03 0.03 0.03)
         in theScene
             `addEntity` objE
             

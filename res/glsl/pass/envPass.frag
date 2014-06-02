@@ -2,16 +2,14 @@
 
 
 uniform samplerCube SkyTexture;
-uniform float intensity;
-in vec3 VertexTex;
+uniform vec4 SkyColor;
+in vec3 VertexUV;
 
 // Red Green Blue Depth
 layout (location = 0) out vec4 pixelColor;
 
 void main()
 {
-    SkyTexture;
-    pixelColor.rgb   = intensity * texture(SkyTexture, VertexTex).rgb;
-    pixelColor.a     = 1.0;
+    pixelColor       = SkyColor * texture(SkyTexture, VertexUV);
 }
 

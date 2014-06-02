@@ -1,19 +1,26 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yage.Examples.Shared
     ( module Yage.Examples.Shared
     ) where
 
-import Yage.Prelude hiding (Text)
+import Yage.Prelude hiding (Text, concatMap)
+import Yage.Lens
 
-
-import Yage.Rendering hiding (P3, P3N3, P3T2, _renderData, _drawSettings)
+import Yage.Rendering hiding (P3, P3N3, P3T2, P3TX2NT3, _renderData, _drawSettings)
 import Yage.Scene
 import Yage.Material
 import Yage.Rendering.Transformation
 import "yage" Yage.Geometry
-import Yage.Geometry3D
+import Yage.Geometry3D hiding (Cube)
+import qualified Yage.Geometry3D as Geo ( Cube )
+import Yage.Formats.Ygm
 
+import Data.List (concatMap)
+
+import Yage.Pipeline.Deferred
 
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
@@ -50,49 +57,33 @@ pyramidEntity =
         }
 
 --}
+vertexFormat :: Pos GLfloat -> Tex GLfloat -> TBN GLfloat -> Vertex (Y'P3TX2TN GLfloat)
+vertexFormat = internalFormat
 
-boxEntity :: SceneEntity P3TX2NT3
-boxEntity =
-    let mesh      = (vertices . triangles $ cube 1) :: [Vertex P3TX2NT3]
-    in SceneEntity 
-        { _renderData     = Right $ meshFromVertexList "box" mesh
-        , _textures       = []
-        , _transformation = idTransformation
-        , _material       = Material (1) 1
-        , _drawSettings   = GLDrawSettings Triangles (Just Back)
-        }
+buildMesh' :: (Storable (Vertex vert)) => String -> Primitive (Vertex vert) -> Mesh vert
+buildMesh' name = meshFromVertexList name . vertices . triangles
 
-floorEntity :: SceneEntity P3TX2NT3
+buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo vertexFormat pos tex
+
+boxEntity :: (Default mat) => Entity (MeshResource (Y'P3TX2TN GLfloat)) mat
+boxEntity = 
+    let cubeMesh = buildMeshUV "box" (cubePos 1) (cubeSingleUV) 
+    in ( basicEntity :: Default mat => Entity (MeshResource (Y'P3TX2TN GLfloat)) mat )
+            & renderData .~ MeshPure cubeMesh
+
+
+floorEntity :: Entity (MeshResource (Y'P3TX2TN GLfloat)) (ResourceMaterial)
 floorEntity =
-    let mesh        = vertices . triangles $ grid 25 1 :: [Vertex P3TX2NT3]
-    in SceneEntity 
-        { _renderData     = Right $ meshFromVertexList "floor" mesh
-        , _textures       = []
-        , _transformation = idTransformation
-        , _material       = Material (1) 1
-        , _drawSettings   = GLDrawSettings Triangles (Just Back)
-        }
+    let gridMesh = buildMeshUV "floor" (gridPos 25 1) (gridUV 25)
+    in ( basicEntity :: Entity (MeshResource (Y'P3TX2TN GLfloat)) ResourceMaterial )
+            & renderData .~ ( MeshPure gridMesh )
 
-objEntity :: MeshFile a -> SceneEntity a
-objEntity res =
-    SceneEntity
-        { _renderData     = Left res
-        , _textures       = []
-        , _transformation = idTransformation
-        , _material       = Material 1 1
-        , _drawSettings   = GLDrawSettings Triangles (Just Back)
-        }
 
-skydome :: TextureCube FilePath -> Sky
-skydome texs = 
-    let mesh = vertices . triangles $ geoSphere 2 10 :: [Vertex P3]
-    in Sky
-        { _skyVolume         = meshFromVertexList "SkyDome" mesh
-        , _skyTexture        = Left <$> texs
-        , _skyTransformation = idTransformation
-        , _skyDrawSettings   = GLDrawSettings Triangles (Just Back)
-        , _skyIntensity      = 0
-        }
+skydome :: Material (Cube TextureResource) -> SkyEntityRes
+skydome cubeTex = 
+    ( basicEntity :: Entity (MeshResource (Y'P3 GLfloat)) (AResourceMaterial Cube) ) -- we have to fix the functor type
+        & materials  .~ cubeTex
+        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 10)
 
 {--
 --}
