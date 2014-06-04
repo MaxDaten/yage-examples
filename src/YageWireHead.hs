@@ -24,7 +24,7 @@ import           Yage.Examples.Shared
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (800, 600)
+    { windowSize = (1200, 800)
     , windowHints = 
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
@@ -54,10 +54,10 @@ makeLenses ''Cube
 
 
 main :: IO ()
-main = yageMain "yage-cube" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-head" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
-camStartPos = V3 0 0 2
+camStartPos = V3 0 0 1
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
 cameraKeys :: MovementKeys
@@ -71,7 +71,7 @@ mainWire = proc () -> do
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
     --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
-    returnA -< CubeView camera
+    returnA -< CubeView (traceShow' camera)
                     (Cube 1 cubeRot 1)
                     (lightPosRed)
                     (lightPosBlue)
@@ -102,26 +102,26 @@ simToRender CubeView{..} =
         let 
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
-                            -- & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
-                            & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
-                            & entityPosition     .~ V3 0 0.5 (-0.5)
-                            & entityScale        *~ 5
+                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
+                            -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
+                            & entityPosition     .~ V3 0 0.5 0
+                            & entityScale        *~ 4
                             & entityOrientation  .~ (realToFrac <$> _theCube^.cubeOrientation)
                             & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
-                            & ( materials.traverse.matTransformation.transScale._t *~ (-1) )
+                            & materials.traverse.matTransformation.transScale._t *~ (-1)
 
             frontPLAttr     = LightAttributes (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
             backPLAttr      = LightAttributes (V4 0.3 0.3 0.5 1) (V3 1 0 (1/128.0)) 30
             movingAttrRed   = LightAttributes (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
             movingAttrBlue  = LightAttributes (V4 0.2 0.2 0.4 1) (V3 1 1 (1/64.0)) 15 
             
-            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 2)) 5) frontPLAttr
+            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 1)) 5) frontPLAttr
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.03 0.03 0.03)
+                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene
             `addEntity` objE
             

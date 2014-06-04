@@ -9,6 +9,7 @@ uniform sampler2D AlbedoTexture;
 uniform sampler2D NormalTexture;
 uniform sampler2D DepthTexture;
 
+// lightPosition is in WorldSpace
 uniform vec3 lightPosition;    
 uniform vec3 lightRadius;    
 uniform vec4 lightColor;

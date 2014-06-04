@@ -24,7 +24,7 @@ import Yage.Examples.Shared
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (800, 600)
+    { windowSize = (1200, 800)
     , windowHints = 
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
@@ -73,10 +73,11 @@ mainWire = proc () -> do
     camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< fpsCamera
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
-    --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
-
+    -- lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
+    -- cScale <- 1.5 + arr (pure . sin) . time -< () 
+    cScale <- 1 -< () 
     returnA -< CubeView camera
-                    (Cube 0 cubeRot 1)
+                    (Cube 0 cubeRot cScale)
                     (lightPosRed)
                     (lightPosBlue)
 
@@ -108,21 +109,26 @@ simToRender CubeView{..} =
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
                             -- & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & entityPosition    .~ (realToFrac <$> _theCube^.cubePosition)
-                            & entityOrientation .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & entityPosition    .~ (_theCube^.cubePosition)
+                            & entityOrientation .~ (_theCube^.cubeOrientation)
+                            & entityScale       .~ (_theCube^.cubeScale)
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
+                            -- scale is st tiling factor
+                            -- & materials.traverse.Mat.matTransformation.transScale *~ 2.0
+                            -- & materials.traverse.Mat.matTransformation.transOrientation .~ axisAngle (V3 0 0 1) (deg2rad 45)
+
                             -- & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg")
                             -- & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg")
-            frontLight  = Light ( Pointlight (0 & _z .~ 1.5) 2 ) ( LightAttributes (V4 0.4 0.4 0.4 1) (V3 0 1 (1/64.0)) 15 )
+            frontLight  = Light ( Pointlight (0 & _z .~ 1.5) 4 ) ( LightAttributes (V4 0.4 0.4 0.4 1) (V3 0 1 (1/64.0)) 15 )
 
             envPath         = texDir </> "env" </> "Space" </> "small"
             cubeFile file   = envPath </> file <.> ext
-            skyCubeMap      = Res.TextureFile <$> Mat.Cube  
-                                { cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
-                                , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
-                                , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
-                                }
+            skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
+                                --{ cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
+                                --, cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
+                                --, cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
+                                --}
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & transformation.transPosition .~ _viewCamera^.cameraLocation
 

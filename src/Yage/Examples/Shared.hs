@@ -83,7 +83,7 @@ skydome :: Material (Cube TextureResource) -> SkyEntityRes
 skydome cubeTex = 
     ( basicEntity :: Entity (MeshResource (Y'P3 GLfloat)) (AResourceMaterial Cube) ) -- we have to fix the functor type
         & materials  .~ cubeTex
-        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 10)
+        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 5)
 
 {--
 --}

@@ -28,10 +28,10 @@ void main()
     AlbedoST             = (AlbedoTextureMatrix * vec4(vTexture, 0.0, 1.0)).st;
     NormalST             = (NormalTextureMatrix * vec4(vTexture, 0.0, 1.0)).st;
     
-    vec3 tangentZ        = normalize( vTangentZ.xyz );
-    vec3 tangentX        = normalize( vTangentX.xyz );
+    vec3 tangentZ        = normalize( NormalMatrix * vTangentZ.xyz );
+    vec3 tangentX        = normalize( NormalMatrix * vTangentX.xyz );
     vec3 tangentY        = normalize( cross( tangentZ, tangentX ) * vTangentZ.w );
-    TangentToView        = mat3(ModelToView) * NormalMatrix * mat3( tangentX, tangentY, tangentZ );
+    TangentToView        = mat3( tangentX, tangentY, tangentZ );
     
     VertexPos_View  = vec3( ModelToView * vec4(vPosition, 1.0) );
     gl_Position     = ModelToProj * vec4( vPosition, 1.0 );
