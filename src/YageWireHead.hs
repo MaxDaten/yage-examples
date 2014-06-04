@@ -102,12 +102,14 @@ simToRender CubeView{..} =
         let 
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
-                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
+                            -- & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
+                            & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
                             & entityPosition     .~ V3 0 0.5 (-0.5)
                             & entityScale        *~ 5
                             & entityOrientation  .~ (realToFrac <$> _theCube^.cubeOrientation)
-                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg" ) 
-                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg" )
+                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
+                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
+                            & ( materials.traverse.matTransformation.transScale._t *~ (-1) )
 
             frontPLAttr     = LightAttributes (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
             backPLAttr      = LightAttributes (V4 0.3 0.3 0.5 1) (V3 1 0 (1/128.0)) 30

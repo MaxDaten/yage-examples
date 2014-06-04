@@ -11,9 +11,10 @@ uniform vec4 AlbedoColor;
 uniform vec4 NormalColor;
 uniform float Specular = 1;
 
-in vec3 VertexPos;
-in vec2 VertexUV;
-smooth in mat3 TBN;
+in vec3 VertexPos_View;
+in vec2 AlbedoST;
+in vec2 NormalST;
+smooth in mat3 TangentToView;
 
 // Red Green Blue Depth
 layout (location = 0) out vec4 OutAlbedo;
@@ -23,7 +24,7 @@ layout (location = 1) out vec4 OutNormal;
 
 vec4 GetAlbedoColor()
 {
-    return AlbedoColor * texture( AlbedoTexture, VertexUV );
+    return AlbedoColor * texture( AlbedoTexture, AlbedoST );
 }
 
 
@@ -35,8 +36,8 @@ vec3 DecodeNormal( vec3 normalC )
 
 vec3 GetBumpedNormal()
 {
-    vec2 NormalXY = DecodeNormal( texture( NormalTexture, VertexUV ).rgb ).rg;
-    float NormalZ = sqrt(1.0 - dot( NormalXY, NormalXY ) );
+    vec2 NormalXY = DecodeNormal( texture( NormalTexture, NormalST ).rgb ).rg;
+    float NormalZ = sqrt( 1.0 - dot( NormalXY, NormalXY ) );
     return NormalColor.rgb * vec3( NormalXY, NormalZ );
 }
 
@@ -50,11 +51,10 @@ vec3 EncodeNormal( vec3 Normal3d )
 void main()
 {
     OutAlbedo.rgb   = GetAlbedoColor().rgb;
-    // OutAlbedo.rgb   = AlbedoColor.rgb;
 
-    OutAlbedo.a     = VertexPos.z / ZFar;
+    OutAlbedo.a     = VertexPos_View.z / ZFar;
 
 
-    OutNormal.rgb   = EncodeNormal( TBN * GetBumpedNormal() );
+    OutNormal.rgb   = EncodeNormal( TangentToView * GetBumpedNormal() );
     OutNormal.a     = 1;
 }

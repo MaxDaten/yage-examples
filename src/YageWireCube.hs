@@ -123,7 +123,7 @@ simToRender CubeView{..} =
                                 , cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
                                 , cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
                                 }
-            sky             = ( skydome $ Mat.Material ( Mat.opaque Mat.white ) skyCubeMap )
+            sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & transformation.transPosition .~ _viewCamera^.cameraLocation
 
             theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
