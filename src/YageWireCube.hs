@@ -41,7 +41,7 @@ appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
 data CubeView = CubeView
-    { _viewCamera     :: CameraHandle
+    { _viewCamera     :: Camera
     , _theCube        :: !Cube
     , _lightPosRed    :: !(V3 Float)
     , _lightPosBlue   :: !(V3 Float)
@@ -70,14 +70,13 @@ cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
-    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< fpsCamera
+    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< mkCameraFps (0.1,10000) (deg2rad 75)
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
     -- lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
     -- cScale <- 1.5 + arr (pure . sin) . time -< () 
-    cScale <- 1 -< () 
     returnA -< CubeView camera
-                    (Cube 0 cubeRot cScale)
+                    (Cube 0 cubeRot 1)
                     (lightPosRed)
                     (lightPosBlue)
 
@@ -109,9 +108,10 @@ simToRender CubeView{..} =
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
                             -- & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & entityPosition    .~ (_theCube^.cubePosition)
+                            & renderData        .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-examples/res/model/meshpreview.ygm" ) Res.YGMFile
+                            & entityPosition    .~ (_theCube^.cubePosition) - V3 0 1 0
                             & entityOrientation .~ (_theCube^.cubeOrientation)
-                            & entityScale       .~ (_theCube^.cubeScale)
+                            & entityScale       //~ 200 -- (_theCube^.cubeScale)
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             -- scale is st tiling factor
@@ -132,7 +132,7 @@ simToRender CubeView{..} =
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & transformation.transPosition .~ _viewCamera^.cameraLocation
 
-            theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
+            theScene        = emptyScene _viewCamera 
                                 & sceneSky ?~ sky
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene

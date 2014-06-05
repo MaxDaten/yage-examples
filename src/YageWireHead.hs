@@ -37,7 +37,7 @@ winSettings = WindowConfig
      }
 
 data CubeView = CubeView
-    { _viewCamera     :: CameraHandle
+    { _viewCamera     :: !Camera
     , _theCube        :: !Cube
     , _lightPosRed    :: !(V3 Float)
     , _lightPosBlue   :: !(V3 Float)
@@ -66,12 +66,12 @@ cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = proc () -> do
     cubeRot   <- cubeRotationByInput   -< ()
-    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< fpsCamera
+    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< mkCameraFps (0.1, 1000.0) (deg2rad 80)
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
     --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
-    returnA -< CubeView (traceShow' camera)
+    returnA -< CubeView camera
                     (Cube 1 cubeRot 1)
                     (lightPosRed)
                     (lightPosBlue)
@@ -120,7 +120,7 @@ simToRender CubeView{..} =
             backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
             movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
             movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
-            theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75))
+            theScene        = emptyScene _viewCamera
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene
             `addEntity` objE
