@@ -106,11 +106,9 @@ simToRender CubeView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & transformation    .~ _theCube
-                            & entityPosition    .~ (_theCube^.transPosition)
-                            & entityOrientation .~ (_theCube^.transOrientation)
-                            & entityScale       //~ 2
+                            & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
+                            & entityTransformation    .~ _theCube
+                            & entityScale             //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             -- scale is st tiling factor
@@ -129,7 +127,7 @@ simToRender CubeView{..} =
                                 --, cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
                                 --}
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                                & transformation.transPosition .~ _viewCamera^.cameraLocation
+                                & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
 
             theScene        = emptyScene _viewCamera 
                                 & sceneSky ?~ sky

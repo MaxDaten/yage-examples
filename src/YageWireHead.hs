@@ -18,7 +18,7 @@ import Yage.Wire hiding ((<>))
 import           Yage.Camera
 import           Yage.Scene
 import qualified Yage.Resources as Res
-import           Yage.Material            hiding (Cube)
+import           Yage.Material            hiding (Head)
 import           Yage.Pipeline.Deferred
 import           Yage.Examples.Shared
 
@@ -36,21 +36,23 @@ winSettings = WindowConfig
         ]
      }
 
-data CubeView = CubeView
+data HeadView = HeadView
     { _viewCamera     :: !Camera
-    , _theCube        :: !Cube
+    , _theHead        :: !Head
     , _lightPosRed    :: !(V3 Float)
     , _lightPosBlue   :: !(V3 Float)
     }
     deriving (Show)
 
-data Cube = Cube
-    { _cubePosition    :: !(V3 Float) 
-    , _cubeOrientation :: !(Quaternion Float)
-    , _cubeScale       :: !(V3 Float)
+data Head = Head
+    { _headPosition    :: !(V3 Float) 
+    , _headOrientation :: !(Quaternion Float)
+    , _headScale       :: !(V3 Float)
     }
     deriving (Show)
-makeLenses ''Cube
+
+makeLenses ''HeadView
+makeLenses ''Head
 
 
 main :: IO ()
@@ -72,23 +74,23 @@ cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
+mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () HeadView
 mainWire = proc () -> do
     let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
     
-    cubeRot   <- cubeRotationByInput   -< ()
+    headRot   <- headRotationByInput   -< ()
     camera    <- cameraControl -< initCamera
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
 
-    returnA -< CubeView camera
-                    (Cube 1 cubeRot 1)
+    returnA -< HeadView camera
+                    (Head 1 headRot 1)
                     (lightPosRed)
                     (lightPosBlue)
 
 
-cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
-cubeRotationByInput =
+headRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+headRotationByInput =
     let acc         = 20
         att         = 0.87
     in 
@@ -106,8 +108,8 @@ cubeRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: CubeView -> Scene SceneEntity SceneEnvironment 
-simToRender CubeView{..} = 
+simToRender :: HeadView -> Scene SceneEntity SceneEnvironment 
+simToRender HeadView{..} = 
         let 
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
@@ -115,7 +117,7 @@ simToRender CubeView{..} =
                             -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        *~ 4
-                            & entityOrientation  .~ (realToFrac <$> _theCube^.cubeOrientation)
+                            & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
                             & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
                             & materials.traverse.matTransformation.transScale._t *~ (-1)

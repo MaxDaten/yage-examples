@@ -108,10 +108,10 @@ simToRender MaterialView{..} =
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
                             -- & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & renderData        .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-examples/res/model/meshpreview.ygm" ) Res.YGMFile
-                            & transformation    .~ _dummy
-                            & entityPosition    -~ V3 0 1 0
-                            & entityScale       //~ 200
+                            & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-examples/res/model/meshpreview.ygm" ) Res.YGMFile
+                            & entityTransformation    .~ _dummy
+                            & entityPosition          -~ V3 0 1 0
+                            & entityScale             //~ 200
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             -- scale is st tiling factor
@@ -124,7 +124,7 @@ simToRender MaterialView{..} =
 
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                                & transformation.transPosition .~ _viewCamera^.cameraLocation
+                                & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
 
             theScene        = emptyScene _viewCamera 
                                 & sceneSky ?~ sky
