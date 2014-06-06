@@ -58,36 +58,45 @@ main = yageMain "yage-head" defaultAppConfig winSettings (simToRender <$> mainWi
 
 camStartPos :: V3 Float
 camStartPos = V3 0 0 1
+
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
-cameraKeys :: MovementKeys
-cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
+
+wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled = wasdMovement (V2 2 2) 
+
+mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
+
+cameraControl :: Real t => YageWire t Camera Camera
+cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
+
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = proc () -> do
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
+    
     cubeRot   <- cubeRotationByInput   -< ()
-    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< mkCameraFps (0.1, 1000.0) (deg2rad 80)
+    camera    <- cameraControl -< initCamera
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
     lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
-    --lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
 
     returnA -< CubeView camera
                     (Cube 1 cubeRot 1)
                     (lightPosRed)
                     (lightPosBlue)
 
-    where
 
-    cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
-    cubeRotationByInput =
-        let acc         = 20
-            att         = 0.87
-        in 
-        smoothRotationByKey acc att ( yAxis ) Key'Right 
-      . smoothRotationByKey acc att (-yAxis ) Key'Left
-      . smoothRotationByKey acc att ( xAxis ) Key'Up
-      . smoothRotationByKey acc att (-xAxis ) Key'Down 
-      . 1
+cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+cubeRotationByInput =
+    let acc         = 20
+        att         = 0.87
+    in 
+    smoothRotationByKey acc att ( yAxis ) Key'Right 
+  . smoothRotationByKey acc att (-yAxis ) Key'Left
+  . smoothRotationByKey acc att ( xAxis ) Key'Up
+  . smoothRotationByKey acc att (-xAxis ) Key'Down 
+  . 1
 
 
 

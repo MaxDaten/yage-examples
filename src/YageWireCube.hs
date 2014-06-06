@@ -40,6 +40,7 @@ winSettings = WindowConfig
 appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
+type Cube = Transformation Float
 data CubeView = CubeView
     { _viewCamera     :: Camera
     , _theCube        :: !Cube
@@ -48,50 +49,48 @@ data CubeView = CubeView
     }
     deriving (Show)
 
-data Cube = Cube
-    { _cubePosition    :: !(V3 Float) 
-    , _cubeOrientation :: !(Quaternion Float)
-    , _cubeScale       :: !(V3 Float)
-    }
-    deriving (Show)
-makeLenses ''Cube
-
+makeLenses ''CubeView
 
 main :: IO ()
 main = yageMain "yage-cube" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
+mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
+mainWire = 
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,10000) idTransformation
+    in CubeView <$> cameraControl . pure initCamera
+                <*> cubeControl . pure idTransformation
+                <*> arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time
+                <*> arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time
+
+
 camStartPos :: V3 Float
 camStartPos = V3 0 0 2
+
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
-cameraKeys :: MovementKeys
-cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
-mainWire = proc () -> do
-    cubeRot   <- cubeRotationByInput   -< ()
-    camera    <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< mkCameraFps (0.1,10000) (deg2rad 75)
-    lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
-    lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
-    -- lightPos  <- pure (V3 (0) 0 (0.0)) -< () 
-    -- cScale <- 1.5 + arr (pure . sin) . time -< () 
-    returnA -< CubeView camera
-                    (Cube 0 cubeRot 1)
-                    (lightPosRed)
-                    (lightPosBlue)
+wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled = wasdMovement (V2 2 2) 
 
-    where
+mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
-    cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
-    cubeRotationByInput =
-        let acc         = 20
-            att         = 0.87
-        in 
-       smoothRotationByKey acc att ( yAxis ) Key'Right 
-     . smoothRotationByKey acc att (-yAxis ) Key'Left
-     . smoothRotationByKey acc att ( xAxis ) Key'Up
-     . smoothRotationByKey acc att (-xAxis ) Key'Down 
-     . 1
+cameraControl :: Real t => YageWire t Camera Camera
+cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
+
+cubeControl :: Real t => YageWire t Cube Cube
+cubeControl = overA transOrientation cubeRotationByInput
+
+cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+cubeRotationByInput =
+    let acc         = 20
+        att         = 0.87
+    in 
+   smoothRotationByKey acc att ( yAxis ) Key'Right 
+ . smoothRotationByKey acc att (-yAxis ) Key'Left
+ . smoothRotationByKey acc att ( xAxis ) Key'Up
+ . smoothRotationByKey acc att (-xAxis ) Key'Down 
+ . 1
 
 
 
@@ -107,11 +106,11 @@ simToRender CubeView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
-                            -- & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & renderData        .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-examples/res/model/meshpreview.ygm" ) Res.YGMFile
-                            & entityPosition    .~ (_theCube^.cubePosition) - V3 0 1 0
-                            & entityOrientation .~ (_theCube^.cubeOrientation)
-                            & entityScale       //~ 200 -- (_theCube^.cubeScale)
+                            & renderData        .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
+                            & transformation    .~ _theCube
+                            & entityPosition    .~ (_theCube^.transPosition)
+                            & entityOrientation .~ (_theCube^.transOrientation)
+                            & entityScale       //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             -- scale is st tiling factor
