@@ -122,15 +122,18 @@ simToRender HeadView{..} =
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
                             & materials.traverse.matTransformation.transScale._t *~ (-1)
 
-            frontPLAttr     = LightAttributes (V4 0.2 0.2 0.2 1) (V3 0 1 (1/64.0)) 15
-            backPLAttr      = LightAttributes (V4 0.3 0.3 0.5 1) (V3 1 0 (1/128.0)) 30
-            movingAttrRed   = LightAttributes (V4 0.4 0.2 0.2 1) (V3 1 1 (1/64.0)) 15 
-            movingAttrBlue  = LightAttributes (V4 0.2 0.2 0.4 1) (V3 1 1 (1/64.0)) 15 
-            
-            frontPLight     = mkLight $ Light (Pointlight ((V3 0 0.5 1)) 5) frontPLAttr
-            backPLight      = mkLight $ Light (Pointlight ((V3 (-1) (-1) (-3))) 5) backPLAttr
-            movingPLightRed = mkLight $ Light (Pointlight (realToFrac <$> _lightPosRed) 0.5) movingAttrRed
-            movingPLightBlue= mkLight $ Light (Pointlight (realToFrac <$> _lightPosBlue) 0.5) movingAttrBlue
+            frontPLight     = Light Pointlight (LightAttributes (V4 0.2 0.2 0.2 1) (0, 1, 1/64.0  ) 15)
+                                & mkLight & lightPosition .~ V3 0 0.5 1
+                                          & lightRadius   .~ 5
+            backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (1, 0, 1/128.0 ) 30)
+                                & mkLight & lightPosition .~ negate (V3 1 1 3)
+                                          & lightRadius   .~ 5
+            movingPLightRed = Light Pointlight (LightAttributes (V4 0.4 0.2 0.2 1) (1, 1, 1/64.0  ) 15)
+                                & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
+                                          & lightRadius   .~ 0.5
+            movingPLightBlue= Light Pointlight (LightAttributes (V4 0.2 0.2 0.4 1) (1, 1, 1/64.0  ) 15)
+                                & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
+                                          & lightRadius   .~ 0.5
             theScene        = emptyScene _viewCamera
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene

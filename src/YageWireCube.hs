@@ -117,7 +117,11 @@ simToRender CubeView{..} =
 
                             -- & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg")
                             -- & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg")
-            frontLight  = Light ( Pointlight (0 & _z .~ 1.5) 4 ) ( LightAttributes (V4 0.4 0.4 0.4 1) (V3 0 1 (1/64.0)) 15 )
+            frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 1/64.0) 15 ) 
+                            & mkLight
+                            & lightPosition .~ V3 0 0 1.5
+                            & lightRadius   .~ 4
+
 
             envPath         = texDir </> "env" </> "Space" </> "small"
             cubeFile file   = envPath </> file <.> ext
@@ -134,5 +138,5 @@ simToRender CubeView{..} =
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene
             `addEntity` boxE
-            `addLight` ( mkLight frontLight )
+            `addLight` frontLight
             
