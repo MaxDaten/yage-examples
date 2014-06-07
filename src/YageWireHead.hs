@@ -116,11 +116,11 @@ simToRender HeadView{..} =
                             & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
                             -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
                             & entityPosition     .~ V3 0 0.5 0
-                            & entityScale        *~ 4
+                            & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
                             & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
-                            & materials.traverse.matTransformation.transScale._t *~ (-1)
+                            & materials.traverse.stpFactor._t %~ negate
 
             frontPLight     = Light Pointlight (LightAttributes (V4 0.2 0.2 0.2 1) (0, 1, 1/64.0  ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 1
