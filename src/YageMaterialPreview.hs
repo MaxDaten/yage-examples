@@ -113,8 +113,7 @@ simToRender MaterialView{..} =
                             & entityScale             //~ 200
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
-                            -- scale is st tiling factor
-                            & materials.traverse.Mat.matTransformation.transScale *~ 2.0
+                            & materials.traverse.Mat.stpFactor .~ 2.0
 
             frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 1/64.0) 15 ) 
                             & mkLight

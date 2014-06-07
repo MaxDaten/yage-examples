@@ -111,8 +111,7 @@ simToRender CubeView{..} =
                             & entityScale             //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
-                            -- scale is st tiling factor
-                            & materials.traverse.Mat.matTransformation.transScale *~ 2.0
+                            & materials.traverse.Mat.stpFactor .~ 2.0
                             -- & materials.traverse.Mat.matTransformation.transOrientation .~ axisAngle (V3 0 0 1) (deg2rad 45)
 
                             -- & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg")
