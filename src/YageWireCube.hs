@@ -106,29 +106,21 @@ simToRender CubeView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm" ) Res.YGMFile
-                            & entityTransformation    .~ _theCube
+                            -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm", [] ) Res.YGMFile
+                            -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "cube_groups.obj", ["cube"] ) Res.OBJFile
+                            & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "Cube.OBJ", [] ) Res.OBJFile
+                            & entityTransformation    .~ _theCube 
                             & entityScale             //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             & materials.traverse.Mat.stpFactor .~ 2.0
-                            -- & materials.traverse.Mat.matTransformation.transOrientation .~ axisAngle (V3 0 0 1) (deg2rad 45)
-
-                            -- & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg")
-                            -- & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg")
             frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 1/64.0) 15 ) 
                             & mkLight
                             & lightPosition .~ V3 0 0 1.5
                             & lightRadius   .~ 4
 
 
-            envPath         = texDir </> "env" </> "Space" </> "small"
-            cubeFile file   = envPath </> file <.> ext
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-                                --{ cubeFaceRight = cubeFile "posx", cubeFaceLeft  = cubeFile "negx"
-                                --, cubeFaceTop   = cubeFile "posy", cubeFaceBottom= cubeFile "negy"
-                                --, cubeFaceFront = cubeFile "posz", cubeFaceBack  = cubeFile "negz"
-                                --}
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
 
