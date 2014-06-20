@@ -57,7 +57,7 @@ main = yageMain "yage-cube" appConf winSettings (simToRender <$> mainWire) yDefe
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = 
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000000) idTransformation
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,100000) idTransformation
     in CubeView <$> cameraControl . pure initCamera
                 <*> cubeControl . pure idTransformation
                 <*> arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time
@@ -65,7 +65,7 @@ mainWire =
 
 
 camStartPos :: V3 Float
-camStartPos = V3 0 0 2
+camStartPos = V3 0 2 2
 
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1

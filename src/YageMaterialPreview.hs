@@ -122,7 +122,8 @@ simToRender MaterialView{..} =
 
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                                & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
+                                & entityPosition .~ _viewCamera^.cameraLocation
+                                & entityScale    .~ 10
 
             theScene        = emptyScene _viewCamera 
                                 & sceneSky ?~ sky
