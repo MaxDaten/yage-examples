@@ -114,7 +114,7 @@ simToRender HeadView{..} =
         let 
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
-                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head.ygm", [] ) Res.YGMFile
+                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head.ygm", mkSelection [] ) Res.YGMFile
                             -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ", [] ) Res.OBJFile
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        .~ 4

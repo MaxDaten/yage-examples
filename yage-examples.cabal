@@ -65,7 +65,7 @@ executable yage-cube
 
     build-depends:        base            <  5
                         , yage            == 0.0.5
-                        , yage-contrib    == 0.0.0.3
+                        , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
                         , yage-geometry   == 0.0.0.2
@@ -99,7 +99,7 @@ executable yage-head
 
     build-depends:        base            <  5
                         , yage            == 0.0.5
-                        , yage-contrib    == 0.0.0.3
+                        , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
                         , yage-geometry   == 0.0.0.2
@@ -133,7 +133,7 @@ executable yage-material
 
     build-depends:        base            <  5
                         , yage            == 0.0.5
-                        , yage-contrib    == 0.0.0.3
+                        , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
                         , yage-geometry   == 0.0.0.2

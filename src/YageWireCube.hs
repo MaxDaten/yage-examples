@@ -106,10 +106,10 @@ simToRender CubeView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
-                            -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm", [] ) Res.YGMFile
+                            & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] ) Res.YGMFile
                             -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "cube_groups.obj", ["cube"] ) Res.OBJFile
                             -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "Cube.OBJ", [] ) Res.OBJFile
-                            & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage/test/res/cube-textures.obj", ["left", "top", "back", "front", "bottom", "right"] ) Res.OBJFile
+                            -- & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage/test/res/cube-textures.obj", ["left", "top", "back", "front", "bottom", "right"] ) Res.OBJFile
                             & entityTransformation    .~ _theCube 
                             & entityScale             //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
