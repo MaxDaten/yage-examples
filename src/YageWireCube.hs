@@ -52,7 +52,7 @@ data CubeView = CubeView
 makeLenses ''CubeView
 
 main :: IO ()
-main = yageMain "yage-cube" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-sponza" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = 
@@ -124,6 +124,7 @@ simToRender CubeView{..} =
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
+                                & entityScale .~ 10
 
             theScene        = emptyScene _viewCamera 
                                 & sceneSky ?~ sky

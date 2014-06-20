@@ -6,7 +6,7 @@ module Yage.Examples.Shared
     ( module Yage.Examples.Shared
     ) where
 
-import Yage.Prelude hiding (Text, concatMap)
+import Yage.Prelude hiding (concatMap)
 import Yage.Lens
 
 import Yage.Rendering hiding (P3, P3N3, P3T2, P3TX2NT3, _renderData, _drawSettings)
@@ -18,7 +18,6 @@ import Yage.Geometry3D hiding (Cube)
 import qualified Yage.Geometry3D as Geo ( Cube )
 import Yage.Formats.Ygm
 
-import Data.Text (Text)
 import Data.List (concatMap)
 
 import Yage.Pipeline.Deferred
@@ -84,7 +83,7 @@ skydome :: Material (Cube TextureResource) -> SkyEntityRes
 skydome cubeTex = 
     ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (AResourceMaterial Cube) ) -- we have to fix the functor type
         & materials  .~ cubeTex
-        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 5)
+        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 1)
 
 {--
 --}
