@@ -18,6 +18,7 @@ import Yage.Geometry3D hiding (Cube)
 import qualified Yage.Geometry3D as Geo ( Cube )
 import Yage.Formats.Ygm
 
+import Data.Text (Text)
 import Data.List (concatMap)
 
 import Yage.Pipeline.Deferred
@@ -60,28 +61,28 @@ pyramidEntity =
 vertexFormat :: Pos GLfloat -> Tex GLfloat -> TBN GLfloat -> Vertex (Y'P3TX2TN GLfloat)
 vertexFormat = internalFormat
 
-buildMesh' :: (Storable (Vertex vert)) => String -> Primitive (Vertex vert) -> Mesh vert
-buildMesh' name = meshFromVertexList name . vertices . triangles
+buildMesh' :: (Storable (Vertex vert)) => Text -> Primitive (Vertex vert) -> Mesh (Vertex vert)
+buildMesh' name = mkFromVerticesF name . vertices . triangles
 
 buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo vertexFormat pos tex
 
-boxEntity :: (Default mat) => Entity (MeshResource (Y'P3TX2TN GLfloat)) mat
+boxEntity :: (Default mat) => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat
 boxEntity = 
     let cubeMesh = buildMeshUV "box" (cubePos 1) (cubeSingleUV) 
-    in ( basicEntity :: Default mat => Entity (MeshResource (Y'P3TX2TN GLfloat)) mat )
+    in ( basicEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat )
             & renderData .~ MeshPure cubeMesh
 
 
-floorEntity :: Entity (MeshResource (Y'P3TX2TN GLfloat)) (ResourceMaterial)
+floorEntity :: Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) (ResourceMaterial)
 floorEntity =
     let gridMesh = buildMeshUV "floor" (gridPos 25 1) (gridUV 25)
-    in ( basicEntity :: Entity (MeshResource (Y'P3TX2TN GLfloat)) ResourceMaterial )
+    in ( basicEntity :: Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) ResourceMaterial )
             & renderData .~ ( MeshPure gridMesh )
 
 
 skydome :: Material (Cube TextureResource) -> SkyEntityRes
 skydome cubeTex = 
-    ( basicEntity :: Entity (MeshResource (Y'P3 GLfloat)) (AResourceMaterial Cube) ) -- we have to fix the functor type
+    ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (AResourceMaterial Cube) ) -- we have to fix the functor type
         & materials  .~ cubeTex
         & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 5)
 

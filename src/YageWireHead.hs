@@ -1,11 +1,12 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE RecordWildCards        #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE FlexibleContexts       #-}
 
 module Main where
 
@@ -113,8 +114,8 @@ simToRender HeadView{..} =
         let 
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
-                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head02.ygm" ) Res.YGMFile
-                            -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ" ) Res.OBJFile
+                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head.ygm", mkSelection [] ) Res.YGMFile
+                            -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ", [] ) Res.OBJFile
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)

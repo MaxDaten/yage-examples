@@ -107,7 +107,7 @@ simToRender MaterialView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-examples/res/model/meshpreview.ygm" ) Res.YGMFile
+                            & renderData              .~ Res.MeshFile ( "res"</>"model"</>"meshpreview"<.>"ygm", mkSelection [] ) Res.YGMFile
                             & entityTransformation    .~ _dummy
                             & entityPosition          -~ V3 0 1 0
                             & entityScale             //~ 200
