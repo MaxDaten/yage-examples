@@ -12,12 +12,12 @@ module Main where
 
 import Yage
 import Yage.Lens hiding ((<.>))
-import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
 import Yage.Pipeline.Deferred
@@ -125,7 +125,7 @@ simToRender CubeView{..} =
 
         theScene        = emptyScene _viewCamera 
                             & sceneSky ?~ sky
-                            & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+                            & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
     in (foldl' addLight theScene (genLights frontLight))
         `addEntity` boxE
     where

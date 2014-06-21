@@ -12,7 +12,7 @@ import Yage.Lens
 import Yage.Rendering hiding (P3, P3N3, P3T2, P3TX2NT3, _renderData, _drawSettings)
 import Yage.Scene
 import Yage.Material
-import Yage.Rendering.Transformation
+import Yage.Transformation
 import "yage" Yage.Geometry
 import Yage.Geometry3D hiding (Cube)
 import qualified Yage.Geometry3D as Geo ( Cube )

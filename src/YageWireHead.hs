@@ -136,7 +136,7 @@ simToRender HeadView{..} =
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
                                           & lightRadius   .~ 0.5
             theScene        = emptyScene _viewCamera
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
         in theScene
             `addEntity` objE
             

@@ -8,6 +8,7 @@ uniform vec2 ZProjRatio;
 uniform sampler2D AlbedoTexture;
 uniform sampler2D NormalTexture;
 uniform sampler2D DepthTexture;
+uniform float Gamma = 2.2;
 
 // lightPosition is in WorldSpace
 uniform vec3 lightPosition;    
@@ -42,6 +43,17 @@ float saturate(float value)
     return clamp(value, 0.0, 1.0);
 }
 
+vec4 gamma(vec3 x, float y)
+{
+    return vec4(pow(x.r, y), pow(x.g, y), pow(x.b, y), 1.0);
+}
+
+vec4 gamma(vec4 x, float y)
+{
+    return vec4(pow(x.r, y), pow(x.g, y), pow(x.b, y), x.a);
+}
+
+
 void main()
 {
     vec2 st;
@@ -51,7 +63,7 @@ void main()
     vec4 albedoCh           = texture( AlbedoTexture, st ).rgba;
     
     // the lit pixel albedo color 
-    vec3 pixel_albedo       = albedoCh.rgb;
+    vec3 pixel_albedo       = gamma(albedoCh.rgb, Gamma).rgb;
 
     // distance from view position (View)
     // float zzz = ;

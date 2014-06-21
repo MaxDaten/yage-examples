@@ -11,12 +11,12 @@ module Main where
 
 import Yage
 import Yage.Lens hiding ((<.>))
-import Yage.Rendering
 import Yage.Math
 import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
 import Yage.Pipeline.Deferred
