@@ -5,6 +5,7 @@
 
 
 uniform sampler2D ScreenTexture;
+uniform sampler2D AddTexture;
 uniform float InverseGamma  = 1.0 / 2.2;
 uniform float Exposure      = 1.0;
 uniform float ExposureBias  = 1.0;
@@ -58,6 +59,9 @@ vec3 ToneMapping(vec3 color)
 void main()
 {
     vec3 texColor = texture( ScreenTexture, VertexUV ).rgb;
+
+    // currently adding bloom
+    texColor     += 3.0 * texture( AddTexture, VertexUV ).rgb;
     texColor     *= Exposure;
 
     vec3 color = ToneMapping( ExposureBias * texColor );
