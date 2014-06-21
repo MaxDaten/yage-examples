@@ -18,6 +18,7 @@ import Yage.Wire hiding ((<>))
 
 import           Yage.Camera
 import           Yage.Scene
+import           Yage.HDR
 import qualified Yage.Resources as Res
 import           Yage.Material            hiding (Head)
 import           Yage.Pipeline.Deferred
@@ -109,7 +110,7 @@ headRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: HeadView -> Scene SceneEntity SceneEnvironment 
+simToRender :: HeadView -> Scene HDRCamera SceneEntity SceneEnvironment 
 simToRender HeadView{..} = 
         let 
             texDir      = "res" </> "tex"
@@ -119,23 +120,23 @@ simToRender HeadView{..} =
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
-                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
-                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
+                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg" )
+                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg" )
                             & materials.traverse.stpFactor._t %~ negate
 
-            frontPLight     = Light Pointlight (LightAttributes (V4 0.2 0.2 0.2 1) (0, 1, 1/64.0  ) 15)
+            frontPLight     = Light Pointlight (LightAttributes (V4 0.3 0.3 0.3 1) (0, 1, 1/64.0  ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 1
                                           & lightRadius   .~ 5
             backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (1, 0, 1/128.0 ) 30)
                                 & mkLight & lightPosition .~ negate (V3 1 1 3)
                                           & lightRadius   .~ 5
-            movingPLightRed = Light Pointlight (LightAttributes (V4 0.4 0.2 0.2 1) (1, 1, 1/64.0  ) 15)
+            movingPLightRed = Light Pointlight (LightAttributes (V4 0.8 0.3 0.3 1) (1, 1, 1/64.0  ) 15)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
                                           & lightRadius   .~ 0.5
             movingPLightBlue= Light Pointlight (LightAttributes (V4 0.2 0.2 0.4 1) (1, 1, 1/64.0  ) 15)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
                                           & lightRadius   .~ 0.5
-            theScene        = emptyScene _viewCamera
+            theScene        = emptyScene (HDRCamera _viewCamera 0.3 1.0)
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
         in theScene
             `addEntity` objE

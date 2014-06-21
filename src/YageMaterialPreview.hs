@@ -16,6 +16,7 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.HDR
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
@@ -102,7 +103,7 @@ dummyRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: MaterialView -> Scene SceneEntity SceneEnvironment 
+simToRender :: MaterialView -> Scene HDRCamera SceneEntity SceneEnvironment 
 simToRender MaterialView{..} = 
         let texDir      = "res" </> "tex"
             ext         = "png"
@@ -115,7 +116,7 @@ simToRender MaterialView{..} =
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             & materials.traverse.Mat.stpFactor .~ 2.0
 
-            frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 1/64.0) 15 ) 
+            frontLight  = Light Pointlight ( LightAttributes (1) (0, 1, 1/64.0) 15 ) 
                             & mkLight
                             & lightPosition .~ V3 0 0 1.5
                             & lightRadius   .~ 4
@@ -125,7 +126,7 @@ simToRender MaterialView{..} =
                                 & entityPosition .~ _viewCamera^.cameraLocation
                                 & entityScale    .~ 10
 
-            theScene        = emptyScene _viewCamera 
+            theScene        = emptyScene (HDRCamera _viewCamera 0.4 1.0) 
                                 & sceneSky ?~ sky
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene

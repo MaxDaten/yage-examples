@@ -17,6 +17,7 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import Yage.HDR
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
@@ -102,7 +103,7 @@ cubeRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: CubeView -> Scene SceneEntity SceneEnvironment 
+simToRender :: CubeView -> Scene HDRCamera SceneEntity SceneEnvironment 
 simToRender CubeView{..} = 
     let texDir      = "res" </> "tex"
         ext         = "png"
@@ -123,7 +124,7 @@ simToRender CubeView{..} =
                             & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                             & entityScale .~ 1000
 
-        theScene        = emptyScene _viewCamera 
+        theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0) 
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
     in (foldl' addLight theScene (genLights frontLight))
