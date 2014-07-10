@@ -61,7 +61,7 @@ main :: IO ()
 main = yageMain "yage-head" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
-camStartPos = V3 0 0 1
+camStartPos = V3 0 0.1 1
 
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
@@ -83,7 +83,7 @@ mainWire = proc () -> do
     headRot   <- headRotationByInput   -< ()
     camera    <- cameraControl -< initCamera
     lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
-    lightPosBlue <- arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time -< () 
+    lightPosBlue <- arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time -< () 
 
     returnA -< HeadView camera
                     (Head 1 headRot 1)
@@ -120,23 +120,27 @@ simToRender HeadView{..} =
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
-                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_albedo.jpg" )
-                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "big" </> "head_tangent.jpg" )
+                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
+                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
                             & materials.traverse.stpFactor._t %~ negate
 
-            frontPLight     = Light Pointlight (LightAttributes (V4 0.3 0.3 0.3 1) (0, 1, 1/64.0  ) 15)
-                                & mkLight & lightPosition .~ V3 0 0.5 1
+            frontPLight     = Light Pointlight (LightAttributes 1 (0, 1, 6 ) 15)
+                                & mkLight & lightPosition .~ V3 0 0.5 2.5
                                           & lightRadius   .~ 5
-            backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (1, 0, 1/128.0 ) 30)
+            
+            backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (0, 0, 7 ) 30)
                                 & mkLight & lightPosition .~ negate (V3 1 1 3)
                                           & lightRadius   .~ 5
-            movingPLightRed = Light Pointlight (LightAttributes (V4 0.8 0.3 0.3 1) (1, 1, 1/64.0  ) 15)
+            
+            movingPLightRed = Light Pointlight (LightAttributes (V4 2 0.4 0.4 1) (0, 2, 6 ) 15)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
                                           & lightRadius   .~ 0.5
-            movingPLightBlue= Light Pointlight (LightAttributes (V4 0.2 0.2 0.4 1) (1, 1, 1/64.0  ) 15)
+            
+            movingPLightBlue= Light Pointlight (LightAttributes (V4 4 4 4 1) ( 0, 3, 8 ) 128)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
-                                          & lightRadius   .~ 0.5
-            theScene        = emptyScene (HDRCamera _viewCamera 0.3 1.0)
+                                          & lightRadius   .~ 1
+            
+            theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 2 (def::HDRBloomSettings))
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
         in theScene
             `addEntity` objE

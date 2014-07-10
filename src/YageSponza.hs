@@ -54,7 +54,7 @@ data CubeView = CubeView
 makeLenses ''CubeView
 
 main :: IO ()
-main = yageMain "yage-cube" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-sponza" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
 mainWire = 
@@ -114,9 +114,9 @@ simToRender CubeView{..} =
                         & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"default"<.>"png")
                         & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"floor_n"<.>"png")
                         & materials.traverse.Mat.stpFactor .~ 2.0
-        frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 1/64.0) 15 ) 
+        frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 6) 15 ) 
                         & mkLight
-                        & lightRadius   .~ 10
+                        & lightRadius   .~ 5
 
 
         skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
@@ -124,7 +124,7 @@ simToRender CubeView{..} =
                             & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                             & entityScale .~ 1000
 
-        theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0) 
+        theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 1 (def & bloomFactor .~ 1.0)) 
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
     in (foldl' addLight theScene (genLights frontLight))

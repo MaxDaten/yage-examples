@@ -5,18 +5,19 @@
 
 
 uniform sampler2D ScreenTexture;
-uniform sampler2D AddTexture;
+uniform vec4 TextureSize;
+// uniform sampler2D AddTexture;
 uniform float InverseGamma  = 1.0 / 2.2;
 uniform float Exposure      = 1.0;
 uniform float ExposureBias  = 1.0;
+uniform float WhitePoint    = 11.2;
 
-float A = 0.15;
-float B = 0.50;
-float C = 0.10;
-float D = 0.20;
-float E = 0.02;
-float F = 0.30;
-float W = 11.2; // white point
+const float A = 0.15;
+const float B = 0.50;
+const float C = 0.10;
+const float D = 0.20;
+const float E = 0.02;
+const float F = 0.30;
 
 in vec2 VertexUV;
 layout (location = 0) out vec3 pixelColor;
@@ -58,17 +59,19 @@ vec3 ToneMapping(vec3 color)
 
 void main()
 {
+    TextureSize;
     vec3 texColor = texture( ScreenTexture, VertexUV ).rgb;
+    // texColor += 0.5 * texture( AddTexture, VertexUV ).rgb;
 
-    // currently adding bloom
-    texColor     += 3.0 * texture( AddTexture, VertexUV ).rgb;
+
     texColor     *= Exposure;
 
     vec3 color = ToneMapping( ExposureBias * texColor );
-    vec3 whiteScale = 1.0f / ToneMapping(vec3(W));
+    vec3 whiteScale = 1.0f / ToneMapping(vec3(WhitePoint));
+
 
     color *= whiteScale;
-
+    // currently adding bloom
     color = inverseGamma( color );
     pixelColor = clamp(color, 0, 1);
 }

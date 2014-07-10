@@ -116,20 +116,25 @@ simToRender MaterialView{..} =
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             & materials.traverse.Mat.stpFactor .~ 2.0
 
-            frontLight  = Light Pointlight ( LightAttributes (1) (0, 1, 1/64.0) 15 ) 
+            mainLight  = Light Pointlight ( LightAttributes 1 (0, 1, 3) 64 ) 
                             & mkLight
                             & lightPosition .~ V3 0 0 1.5
-                            & lightRadius   .~ 4
+                            & lightRadius   .~ 3
+            specLight  = Light Pointlight ( LightAttributes 8 (0, 3, 10) 128 ) 
+                            & mkLight
+                            & lightPosition .~ (V3 0 0.5 0.5)
+                            & lightRadius   .~ 1
 
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                                 & entityPosition .~ _viewCamera^.cameraLocation
                                 & entityScale    .~ 10
 
-            theScene        = emptyScene (HDRCamera _viewCamera 0.4 1.0) 
+            theScene        = emptyScene (HDRCamera _viewCamera 1 1.0 2 (def & bloomFactor .~ 1)) 
                                 & sceneSky ?~ sky
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+                                & sceneEnvironment.envAmbient .~ AmbientLight 0
         in theScene
             `addEntity` boxE
-            `addLight` frontLight
+            `addLight` mainLight
+            `addLight` specLight
             
