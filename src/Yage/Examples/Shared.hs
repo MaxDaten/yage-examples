@@ -9,16 +9,12 @@ module Yage.Examples.Shared
 import Yage.Prelude hiding (concatMap)
 import Yage.Lens
 
-import Yage.Rendering hiding (P3, P3N3, P3T2, P3TX2NT3, _renderData, _drawSettings)
+import Yage.Rendering
 import Yage.Scene
 import Yage.Material
-import Yage.Transformation
 import "yage" Yage.Geometry
 import Yage.Geometry3D hiding (Cube)
-import qualified Yage.Geometry3D as Geo ( Cube )
 import Yage.Formats.Ygm
-
-import Data.List (concatMap)
 
 import Yage.Pipeline.Deferred
 
@@ -60,9 +56,6 @@ pyramidEntity =
 vertexFormat :: Pos GLfloat -> Tex GLfloat -> TBN GLfloat -> Vertex (Y'P3TX2TN GLfloat)
 vertexFormat = internalFormat
 
-buildMesh' :: (Storable (Vertex vert)) => Text -> Primitive (Vertex vert) -> Mesh (Vertex vert)
-buildMesh' name = mkFromVerticesF name . vertices . triangles
-
 buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo vertexFormat pos tex
 
 boxEntity :: (Default mat) => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat
@@ -83,7 +76,7 @@ skydome :: Material (Cube TextureResource) -> SkyEntityRes
 skydome cubeTex = 
     ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (AResourceMaterial Cube) ) -- we have to fix the functor type
         & materials  .~ cubeTex
-        & renderData .~ (buildMesh' "SkyDome" $ geoSphere 2 1)
+        & renderData .~ (mkFromVerticesF "SkyDome" $ map (position3 =:) . vertices . triangles $ geoSphere 2 1)
 
 {--
 --}

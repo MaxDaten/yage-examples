@@ -24,11 +24,6 @@ Flag perf
     Description:   Enables optimizations
     Default:       True
 
-Flag prof
-    Description:   Enables profiling
-    Default:       False
-
-
 
 -- executable yage-examples
   -- main-is:             
@@ -47,18 +42,9 @@ executable yage-cube
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:          -j8
+    ghc-options:          -j8 -O2 -threaded -rtsopts -with-rtsopts=-N
+    ghc-prof-options:     -w -prof
 
-    if flag(perf)
-        ghc-options:      -threaded -O2
-    else
-        ghc-options:      -threaded -O0
-
-    if flag(dev)
-        ghc-options:      -rtsopts
-
-    if flag(prof)
-        ghc-options:      -auto-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
@@ -66,7 +52,7 @@ executable yage-cube
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.0.5
+                        , yage            == 0.1.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
@@ -74,7 +60,7 @@ executable yage-cube
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            == 4.2.*
+                        , lens            == 4.3.*
                         , linear          == 1.10.*
 
 executable yage-head
@@ -84,18 +70,9 @@ executable yage-head
     other-modules:        Yage.Examples.Shared
 
     
-    ghc-options:          -j8
+    ghc-options:          -j8 -O2 -threaded -rtsopts -with-rtsopts=-N
+    ghc-prof-options:     -w -prof
 
-    if flag(perf)
-        ghc-options:      -threaded -O2
-    else
-        ghc-options:      -threaded -O0
-
-    if flag(dev)
-        ghc-options:      -rtsopts
-
-    if flag(prof)
-        ghc-options:      -auto-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
@@ -103,7 +80,7 @@ executable yage-head
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.0.5
+                        , yage            == 0.1.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
@@ -111,7 +88,7 @@ executable yage-head
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            >= 3
+                        , lens            == 4.3.*
                         , linear          >= 1.3
 
 executable yage-material
@@ -120,18 +97,11 @@ executable yage-material
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:          -j8
+    ghc-options:          -j8 -O2 -threaded -rtsopts -with-rtsopts=-N
+    ghc-prof-options:     -w -prof
 
-    if flag(perf)
-        ghc-options:      -threaded -O2
-    else
-        ghc-options:      -threaded -O0
 
-    if flag(dev)
-        ghc-options:      -rtsopts
 
-    if flag(prof)
-        ghc-options:      -auto-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
@@ -139,7 +109,7 @@ executable yage-material
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.0.5
+                        , yage            == 0.1.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0
@@ -147,7 +117,7 @@ executable yage-material
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            >= 3
+                        , lens            == 4.3.*
                         , linear          >= 1.3
 
 executable yage-sponza
@@ -156,18 +126,9 @@ executable yage-sponza
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:          -j8
+    ghc-options:          -j8 -O2 -threaded -rtsopts -with-rtsopts=-N
+    ghc-prof-options:     -w -prof
 
-    if flag(perf)
-        ghc-options:      -threaded -O2
-    else
-        ghc-options:      -threaded -O0
-
-    if flag(dev)
-        ghc-options:      -rtsopts
-
-    if flag(prof)
-        ghc-options:      -auto-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
@@ -175,7 +136,7 @@ executable yage-sponza
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.0.5
+                        , yage            == 0.1.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
                         , yage-rendering  == 0.0.4.0

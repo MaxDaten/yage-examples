@@ -20,9 +20,8 @@ import           Yage.Camera
 import           Yage.Scene
 import           Yage.HDR
 import qualified Yage.Resources as Res
-import           Yage.Material            hiding (Head)
+import           Yage.Material
 import           Yage.Pipeline.Deferred
-import           Yage.Examples.Shared
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
