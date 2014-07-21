@@ -52,10 +52,10 @@ executable yage-cube
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.1.0
+                        , yage            == 0.2.0.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.4.0
+                        , yage-rendering  == 0.0.5.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
@@ -80,10 +80,10 @@ executable yage-head
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.1.0
+                        , yage            == 0.2.0.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.4.0
+                        , yage-rendering  == 0.0.5.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
@@ -109,10 +109,10 @@ executable yage-material
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.1.0
+                        , yage            == 0.2.0.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.4.0
+                        , yage-rendering  == 0.0.5.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
@@ -136,10 +136,10 @@ executable yage-sponza
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.1.0
+                        , yage            == 0.2.0.0
                         , yage-contrib    == 0.0.1.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.4.0
+                        , yage-rendering  == 0.0.5.0
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
