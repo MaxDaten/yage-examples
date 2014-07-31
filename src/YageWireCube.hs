@@ -17,6 +17,7 @@ import Yage.Wire hiding ((<>))
 import Yage.Camera
 import Yage.Scene
 import Yage.HDR
+import Yage.UI.GUI
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
@@ -26,7 +27,7 @@ import Yage.Examples.Shared
 winSettings :: WindowConfig
 winSettings = WindowConfig
     { windowSize = (1200, 800)
-    , windowHints = 
+    , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
@@ -56,7 +57,7 @@ main :: IO ()
 main = yageMain "yage-sponza" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () CubeView
-mainWire = 
+mainWire =
     let initCamera = mkCameraFps (deg2rad 75) (0.1,10000) idTransformation
     in CubeView <$> cameraControl . pure initCamera
                 <*> cubeControl . pure idTransformation
@@ -71,7 +72,7 @@ mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
 
 wasdControlled :: Real t => YageWire t () (V3 Float)
-wasdControlled = wasdMovement (V2 2 2) 
+wasdControlled = wasdMovement (V2 2 2)
 
 mouseControlled :: Real t => YageWire t () (V2 Float)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
@@ -86,11 +87,11 @@ cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
 cubeRotationByInput =
     let acc         = 20
         att         = 0.87
-    in 
-   smoothRotationByKey acc att ( yAxis ) Key'Right 
+    in
+   smoothRotationByKey acc att ( yAxis ) Key'Right
  . smoothRotationByKey acc att (-yAxis ) Key'Left
  . smoothRotationByKey acc att ( xAxis ) Key'Up
- . smoothRotationByKey acc att (-xAxis ) Key'Down 
+ . smoothRotationByKey acc att (-xAxis ) Key'Down
  . 1
 
 
@@ -102,8 +103,8 @@ cubeRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: CubeView -> Scene HDRCamera SceneEntity SceneEnvironment 
-simToRender CubeView{..} = 
+simToRender :: CubeView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
+simToRender CubeView{..} =
         let texDir      = "res" </> "tex"
             ext         = "png"
             boxE        = ( boxEntity :: GeoEntityRes )
@@ -111,12 +112,12 @@ simToRender CubeView{..} =
                             -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "cube_groups.obj", ["cube"] ) Res.OBJFile
                             -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "Cube.OBJ", [] ) Res.OBJFile
                             -- & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage/test/res/cube-textures.obj", ["left", "top", "back", "front", "bottom", "right"] ) Res.OBJFile
-                            & entityTransformation    .~ _theCube 
+                            & entityTransformation    .~ _theCube
                             & entityScale             //~ 2
                             & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
                             & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
                             & materials.traverse.Mat.stpFactor .~ 2.0
-            frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 6) 15 ) 
+            frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 6) 15 )
                             & mkLight
                             & lightPosition .~ V3 0 0 1.5
                             & lightRadius   .~ 4
@@ -127,10 +128,10 @@ simToRender CubeView{..} =
                                 & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                                 & entityScale .~ 10
 
-            theScene        = emptyScene (HDRCamera _viewCamera 1.0 1.0 2 def) 
+            theScene        = emptyScene (HDRCamera _viewCamera 1.0 1.0 2 def) emptyGUI
                                 & sceneSky ?~ sky
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
         in theScene
             `addEntity` boxE
             `addLight` frontLight
-            
+

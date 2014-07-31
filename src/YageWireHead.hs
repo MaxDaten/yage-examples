@@ -19,6 +19,7 @@ import Yage.Wire hiding ((<>))
 import           Yage.Camera
 import           Yage.Scene
 import           Yage.HDR
+import           Yage.UI.GUI
 import qualified Yage.Resources as Res
 import           Yage.Material
 import           Yage.Pipeline.Deferred
@@ -26,7 +27,7 @@ import           Yage.Pipeline.Deferred
 winSettings :: WindowConfig
 winSettings = WindowConfig
     { windowSize = (1200, 800)
-    , windowHints = 
+    , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
@@ -46,7 +47,7 @@ data HeadView = HeadView
     deriving (Show)
 
 data Head = Head
-    { _headPosition    :: !(V3 Float) 
+    { _headPosition    :: !(V3 Float)
     , _headOrientation :: !(Quaternion Float)
     , _headScale       :: !(V3 Float)
     }
@@ -66,7 +67,7 @@ mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
 
 wasdControlled :: Real t => YageWire t () (V3 Float)
-wasdControlled = wasdMovement (V2 2 2) 
+wasdControlled = wasdMovement (V2 2 2)
 
 mouseControlled :: Real t => YageWire t () (V2 Float)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
@@ -78,11 +79,11 @@ cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouse
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () HeadView
 mainWire = proc () -> do
     let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
-    
+
     headRot   <- headRotationByInput   -< ()
     camera    <- cameraControl -< initCamera
-    lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< () 
-    lightPosBlue <- arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time -< () 
+    lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
+    lightPosBlue <- arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time -< ()
 
     returnA -< HeadView camera
                     (Head 1 headRot 1)
@@ -94,11 +95,11 @@ headRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
 headRotationByInput =
     let acc         = 20
         att         = 0.87
-    in 
-    smoothRotationByKey acc att ( yAxis ) Key'Right 
+    in
+    smoothRotationByKey acc att ( yAxis ) Key'Right
   . smoothRotationByKey acc att (-yAxis ) Key'Left
   . smoothRotationByKey acc att ( xAxis ) Key'Up
-  . smoothRotationByKey acc att (-xAxis ) Key'Down 
+  . smoothRotationByKey acc att (-xAxis ) Key'Down
   . 1
 
 
@@ -109,9 +110,9 @@ headRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: HeadView -> Scene HDRCamera SceneEntity SceneEnvironment 
-simToRender HeadView{..} = 
-        let 
+simToRender :: HeadView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
+simToRender HeadView{..} =
+        let
             texDir      = "res" </> "tex"
             objE        = (basicEntity :: GeoEntityRes)
                             & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head.ygm", mkSelection [] ) Res.YGMFile
@@ -126,26 +127,26 @@ simToRender HeadView{..} =
             frontPLight     = Light Pointlight (LightAttributes 1 (0, 1, 6 ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 2.5
                                           & lightRadius   .~ 5
-            
+
             backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (0, 0, 7 ) 30)
                                 & mkLight & lightPosition .~ negate (V3 1 1 3)
                                           & lightRadius   .~ 5
-            
+
             movingPLightRed = Light Pointlight (LightAttributes (V4 2 0.4 0.4 1) (0, 2, 6 ) 15)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
                                           & lightRadius   .~ 0.5
-            
+
             movingPLightBlue= Light Pointlight (LightAttributes (V4 4 4 4 1) ( 0, 3, 8 ) 128)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
                                           & lightRadius   .~ 1
-            
-            theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 2 (def::HDRBloomSettings))
+
+            theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 2 (def::HDRBloomSettings)) emptyGUI
                                 & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
         in theScene
             `addEntity` objE
-            
+
             `addLight` frontPLight
             `addLight` backPLight
             `addLight` movingPLightRed
             `addLight` movingPLightBlue
-            
+

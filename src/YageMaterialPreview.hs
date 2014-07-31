@@ -6,17 +6,22 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE Arrows #-}
 
 module Main where
 
 import Yage
 import Yage.Lens hiding ((<.>))
 import Yage.Math
-import Yage.Wire hiding ((<>))
+import Yage.Wire hiding ((<>), at)
 
 import Yage.Camera
 import Yage.Scene
 import Yage.HDR
+import Yage.Texture.Atlas
+
+import Yage.UI.GUI
+
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
@@ -26,7 +31,7 @@ import Yage.Examples.Shared
 winSettings :: WindowConfig
 winSettings = WindowConfig
     { windowSize = (1200, 800)
-    , windowHints = 
+    , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
@@ -46,7 +51,8 @@ type Dummy = Transformation Float
 data MaterialView = MaterialView
     { _viewCamera     :: Camera
     , _dummy          :: !Dummy
-    } deriving (Show)
+    , _gui            :: GUI
+    }
 
 makeLenses ''MaterialView
 
@@ -61,6 +67,7 @@ mainWire =
     -- warning, camera init position will be overidden by cam starting pos (we integrate the position in the camerMovement wire)
     in MaterialView <$> cameraControl . pure initCamera
                     <*> dummyControl . pure idTransformation
+                    <*> guiWire
 
 
 -- Camera Control Wires
@@ -71,7 +78,7 @@ mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
 
 wasdControlled :: Real t => YageWire t () (V3 Float)
-wasdControlled = wasdMovement (V2 2 2) 
+wasdControlled = wasdMovement (V2 2 2)
 
 mouseControlled :: Real t => YageWire t () (V2 Float)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
@@ -88,13 +95,50 @@ dummyRotationByInput :: (Real t) => YageWire t (Quaternion Float) (Quaternion Fl
 dummyRotationByInput =
     let acc         = 20
         att         = 0.87
-    in 
-   smoothRotationByKey acc att ( yAxis ) Key'Right 
+    in
+   smoothRotationByKey acc att ( yAxis ) Key'Right
  . smoothRotationByKey acc att (-yAxis ) Key'Left
  . smoothRotationByKey acc att ( xAxis ) Key'Up
  . smoothRotationByKey acc att (-xAxis ) Key'Down
 
 
+fontchars :: String
+fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
+            "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" ++
+            "`abcdefghijklmnopqrstuvwxyz{|}~"
+
+fontPath :: String
+fontPath  = fpToString $ "res" </> "font" </> "SourceCodePro-Light.otf"
+
+guiWire :: Real t => YageWire t () GUI
+guiWire = proc _ -> do
+    fontTex <- hold . once . now . loadExternalFont -< ()
+
+    let infoTxt  = format "mesh: {}\nalbedo: {}\nnormal: {}"
+                    ( Shown meshFile, Shown albeoFile, Shown normalFile )
+
+        text     = emptyTextBuffer fontTex
+                    & charColor  .~ V4 0 0 0 1
+                    & buffText  .~ infoTxt
+
+        textPos  = idTransformation & transPosition  .~ V3 50 180 0
+                                    & transScale._xy *~ 1.5
+
+    returnA -< emptyGUI & guiElements.at "Hallo" ?~ GUIFont text textPos
+
+    where
+    loadExternalFont =
+        let descr = FontDescriptor (21^.pt, 21^.pt) (1024,1024)
+        in mkGenN $ \_ -> do
+            lib  <- makeLibrary
+            font <- loadFont lib fontPath descr
+
+            let fontAtlas      :: TextureAtlas Char Mat.Pixel8
+                fontAtlas      = emptyAtlas $ AtlasSettings (V2 2048 2048) (0 :: Mat.Pixel8) 5
+                markup         = FontMarkup 1.0 1.0
+                Right fontTex  = generateFontTexture font markup Monochrome fontchars fontAtlas
+
+            return $ (Right fontTex, mkConst $ Right fontTex)
 
 -------------------------------------------------------------------------------
 -- View Definition
@@ -103,24 +147,31 @@ dummyRotationByInput =
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-simToRender :: MaterialView -> Scene HDRCamera SceneEntity SceneEnvironment 
-simToRender MaterialView{..} = 
-        let texDir      = "res" </> "tex"
-            ext         = "png"
-            boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData              .~ Res.MeshFile ( "res"</>"model"</>"meshpreview"<.>"ygm", mkSelection [] ) Res.YGMFile
+
+texDir :: FilePath
+texDir      = "res" </> "tex"
+
+albeoFile, normalFile, meshFile :: FilePath
+albeoFile   = texDir </> "floor_d" <.> "png"
+normalFile  = texDir </> "floor_n" <.> "png"
+meshFile    = "res" </> "model" </> "meshpreview" <.> "ygm"
+
+simToRender :: MaterialView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
+simToRender MaterialView{..} =
+        let boxE        = ( boxEntity :: GeoEntityRes )
+                            & renderData              .~ Res.MeshFile ( meshFile, mkSelection [] ) Res.YGMFile
                             & entityTransformation    .~ _dummy
                             & entityPosition          -~ V3 0 1 0
                             & entityScale             //~ 200
-                            & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
-                            & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
+                            & materials.albedoMaterial.Mat.singleMaterial .~ Res.TextureFile albeoFile
+                            & materials.normalMaterial.Mat.singleMaterial .~ Res.TextureFile normalFile
                             & materials.traverse.Mat.stpFactor .~ 2.0
 
-            mainLight  = Light Pointlight ( LightAttributes 1 (0, 1, 3) 64 ) 
+            mainLight  = Light Pointlight ( LightAttributes 1 (0, 1, 3) 64 )
                             & mkLight
                             & lightPosition .~ V3 0 0 1.5
                             & lightRadius   .~ 3
-            specLight  = Light Pointlight ( LightAttributes 8 (0, 3, 10) 128 ) 
+            specLight  = Light Pointlight ( LightAttributes 8 (0, 3, 10) 128 )
                             & mkLight
                             & lightPosition .~ (V3 0 0.5 0.5)
                             & lightRadius   .~ 1
@@ -130,11 +181,13 @@ simToRender MaterialView{..} =
                                 & entityPosition .~ _viewCamera^.cameraLocation
                                 & entityScale    .~ 10
 
-            theScene        = emptyScene (HDRCamera _viewCamera 1 1.0 2 (def & bloomFactor .~ 1)) 
+            camera          = HDRCamera _viewCamera 1 1.0 2 (def & bloomFactor .~ 1)
+
+            theScene        = emptyScene camera _gui
                                 & sceneSky ?~ sky
                                 & sceneEnvironment.envAmbient .~ AmbientLight 0
         in theScene
             `addEntity` boxE
             `addLight` mainLight
             `addLight` specLight
-            
+
