@@ -113,22 +113,34 @@ fontPath  = fpToString $ "res" </> "font" </> "SourceCodePro-Light.otf"
 guiWire :: Real t => YageWire t () GUI
 guiWire = proc _ -> do
     fontTex <- hold . once . now . loadExternalFont -< ()
+    t       <- time -< ()
 
     let infoTxt  = format "mesh: {}\nalbedo: {}\nnormal: {}"
                     ( Shown meshFile, Shown albeoFile, Shown normalFile )
 
-        text     = emptyTextBuffer fontTex
+        fileText = emptyTextBuffer fontTex
                     & charColor  .~ V4 0 0 0 1
                     & buffText  .~ infoTxt
 
-        textPos  = idTransformation & transPosition  .~ V3 50 180 0
-                                    & transScale._xy *~ 1.5
+        fileTrans  = idTransformation & transPosition  .~ V3 50 180 0
+                                      & transScale._xy *~ 1.5
 
-    returnA -< emptyGUI & guiElements.at "Hallo" ?~ GUIFont text textPos
+        timeTxt  = format "t: {}"
+                    ( Only $ fixed 2 t )
+
+        timeText = emptyTextBuffer fontTex
+                    & charColor  .~ V4 0 0 0 1
+                    & buffText  .~ timeTxt
+
+        timeTrans  = idTransformation & transPosition  .~ V3 1000 50 0
+                                      & transScale._xy *~ 1.5
+
+    returnA -< emptyGUI & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
+                        & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
 
     where
     loadExternalFont =
-        let descr = FontDescriptor (21^.pt, 21^.pt) (1024,1024)
+        let descr = FontDescriptor (24^.pt, 24^.pt) (512,512)
         in mkGenN $ \_ -> do
             lib  <- makeLibrary
             font <- loadFont lib fontPath descr
@@ -136,7 +148,7 @@ guiWire = proc _ -> do
             let fontAtlas      :: TextureAtlas Char Mat.Pixel8
                 fontAtlas      = emptyAtlas $ AtlasSettings (V2 2048 2048) (0 :: Mat.Pixel8) 5
                 markup         = FontMarkup 1.0 1.0
-                Right fontTex  = generateFontTexture font markup Monochrome fontchars fontAtlas
+                Right fontTex  = generateFontBitmapTexture font markup Monochrome fontchars fontAtlas
 
             return $ (Right fontTex, mkConst $ Right fontTex)
 
