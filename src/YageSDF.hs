@@ -38,7 +38,7 @@ import Yage.Pipeline.Deferred.GuiPass         as Pass
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (1200, 800)
+    { windowSize = (800, 800)
     , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
@@ -64,8 +64,6 @@ main :: IO ()
 main = do
     bitTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66.png"
     sdfTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66-sdf.png"
-    --sdfTexture <- loadTexture2D "/Users/jloos/Desktop/Bildschirmfoto-2014-08-04-um-11.05.01.png"
-    --sdfTexture <- loadTexture2D "/Users/jloos/Dropbox/Screenshots/Yage/Bildschirmfoto 2014-08-04 um 11.05.01.png"
     yageMain "yage-sdf" appConf winSettings (mainWire bitTexture sdfTexture) sdfRenderSystem (1/60)
 
 
@@ -83,9 +81,10 @@ mainWire bitmap sdf =
         txtColor = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
 
     in proc _ -> do
-        factor <- arr ((+) 1.5) . arr sin . time -< ()
-        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF" ?~ guiImageSDF sdf txtColor 0 (V2 (400*factor) (400*factor))
-                                          & guiElements.at "BIT" ?~ guiImage bitmap txtColor (V2 450 0) (V2 (400*factor) (400*factor))
+        factor  <- whileKeyDown Key'A . arr (1.0+) . arr sin . arr (*0.5) . time <|> 1 -< ()
+        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF"  ?~ guiImageSDF sdf txtColor 0 (V2 (400*factor) (400*factor))
+                                          & guiElements.at "BIT"  ?~ guiImage bitmap txtColor (V2 400 0) (V2 (400*factor) (400*factor))
+                                          & guiElements.at "SDFP" ?~ guiImage sdf    txtColor (V2 0 400) (V2 (400*factor) (400*factor))
 
 
 
