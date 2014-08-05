@@ -82,9 +82,10 @@ mainWire bitmap sdf =
 
     in proc _ -> do
         factor  <- whileKeyDown Key'A . arr (1.0+) . arr sin . arr (*0.5) . time <|> 1 -< ()
-        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF"  ?~ guiImageSDF sdf txtColor 0 (V2 (400*factor) (400*factor))
-                                          & guiElements.at "BIT"  ?~ guiImage bitmap txtColor (V2 400 0) (V2 (400*factor) (400*factor))
-                                          & guiElements.at "SDFP" ?~ guiImage sdf    txtColor (V2 0 400) (V2 (400*factor) (400*factor))
+        let elemSize = factor *^ V2 400 400
+        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF"  ?~ guiImageSDF sdf txtColor 0 elemSize
+                                          & guiElements.at "BIT"  ?~ guiImage bitmap txtColor (V2 400 0) elemSize
+                                          & guiElements.at "SDFP" ?~ guiImage sdf    txtColor (V2 0 400) elemSize
 
 
 
