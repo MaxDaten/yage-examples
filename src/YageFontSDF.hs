@@ -20,6 +20,7 @@ import Yage.Camera
 import Yage.Scene
 import Yage.HDR
 import Yage.Texture
+import Yage.Texture.Atlas.Builder
 import "yage" Yage.Geometry
 import Yage.Rendering.Mesh
 
@@ -38,7 +39,7 @@ import Yage.Pipeline.Deferred.GuiPass         as Pass
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (800, 800)
+    { windowSize = (1000, 230)
     , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
@@ -61,24 +62,25 @@ makeLenses ''SDFView
 
 fontPath :: String
 fontPath  = fpToString $ "res" </> "font" </> "SourceCodePro-Regular.otf"
+--fontPath  = fpToString $ "res" </> "font" </> "SourceSansPro-Regular.otf"
 
 fontchars :: String
 fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
             "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" ++
             "`abcdefghijklmnopqrstuvwxyz{|}~"
+            -- ++ "λ"
 
 
 main :: IO ()
 main = do
-    let descr = FontDescriptor (24^.pt, 24^.pt) (512,512)
+    let descr = FontDescriptor (21^.pt, 21^.pt) (512,512)
     lib  <- makeLibrary
     font <- loadFont lib fontPath descr
 
-    let fontAtlas      :: TextureAtlas Char Mat.Pixel8
-        fontAtlas      = emptyAtlas $ AtlasSettings (V2 1024 1024) (0 :: Mat.Pixel8) 5
+    let settings       = AtlasSettings (V2 1024 1024) (0 :: Mat.Pixel8) 5
         markup         = FontMarkup 1.0 1.0
-        genFont        = generateFontBitmapTexture font markup Monochrome fontchars fontAtlas
-        Right fontTex  = downscaleFontTexture 2 . sdfFontTexture 4 <$> genFont
+        genFont        = generateFontBitmapTexture font markup Monochrome fontchars settings
+        Right fontTex  = downscaleFontTexture 1 . sdfFontTexture 4 <$> genFont
 
     Mat.writePng "font-out.png" $ fontTex^.fontMap
     yageMain "yage-font-sdf" appConf winSettings (mainWire fontTex) sdfRenderSystem (1/60)
@@ -92,22 +94,24 @@ sdfRenderSystem viewport theView = do
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => FontTexture -> YageWire t () SDFView
 mainWire fontTex =
-    let bgrColor  = Mat.TexRGB8 `Mat.pxTexture` Mat.thistle
+    let bgrColor  = Mat.TexRGB8 `Mat.pxTexture` Mat.sRGB24 66 85 114
         bgr       = Texture "Background" def $ Mat.Texture2D bgrColor
-        txtColor  = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
+
+        txtColor  = Mat.sRGBV4 $ Mat.opaque $ Mat.sRGB24 253 96 65
         txtBuffer = emptyTextBuffer fontTex
                         & charColor .~ txtColor
-                        & buffText  .~ ">>= \\x -> Hallo RealWorld!"
+                        & buffText  .~ "A monad is just a monoid \nin the category of endofunctors"
 
         imgTex   = Mat.mkTextureImg Mat.TexY8 $ fontTex^.fontMap
-        tex      = mkTexture (fontTex^.font.to fontName.packedChars) $ Texture2D imgTex
+        tex      = mkTexture (fontTex^.fontMetric.fontName.packedChars) $ Texture2D imgTex
 
 
     in proc _ -> do
+        scale <- integral 1 . ( whileKeyDown Key'Up . 1 <|> 0 ) -< ()
         returnA -< SDFView
             { _background = bgr
-            , _gui        = emptyGUI & guiElements.at "Hallo"       ?~ GUIFont txtBuffer (idTransformation & transPosition._xy .~ V2 50 50
-                                                                                                           & transScale._xy .~ V2 2 2)
+            , _gui        = emptyGUI & guiElements.at "Hallo"       ?~ GUIFont txtBuffer (idTransformation & transPosition._xy .~ V2 50 180
+                                                                                                           & transScale._xy .~ scale * V2 3 3)
                                      -- & guiElements.at "FontTexture" ?~ guiImage tex txtColor (V2 0 0) (V2 800 800)
             }
 
