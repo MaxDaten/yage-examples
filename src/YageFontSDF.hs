@@ -62,9 +62,9 @@ data SDFView = SDFView
 
 makeLenses ''SDFView
 
-fontPath :: String
-fontPath  = fpToString $ "res" </> "font" </> "SourceCodePro-Regular.otf"
---fontPath  = fpToString $ "res" </> "font" </> "SourceSansPro-Regular.otf"
+fontPath :: FilePath
+fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular16.yft"
 
 fontchars :: String
 fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
@@ -75,7 +75,7 @@ fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
 
 main :: IO ()
 main = do
-    fontTexture <- readFontTexture $ "res" </> "font" </> "ytf" </> "SourceCodePro-Regular.yft"
+    fontTexture <- readFontTexture fontPath
     yageMain "yage-font-sdf" appConf winSettings (mainWire fontTexture) sdfRenderSystem (1/60)
 
 
