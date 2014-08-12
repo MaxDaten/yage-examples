@@ -20,6 +20,8 @@ import Yage.Camera
 import Yage.Scene
 import Yage.HDR
 import Yage.Texture
+import Yage.Formats.Font
+
 import Yage.Texture.Atlas.Builder
 import "yage" Yage.Geometry
 import Yage.Rendering.Mesh
@@ -73,17 +75,8 @@ fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
 
 main :: IO ()
 main = do
-    let descr = FontDescriptor (21^.pt, 21^.pt) (512,512)
-    lib  <- makeLibrary
-    font <- loadFont lib fontPath descr
-
-    let settings       = AtlasSettings (V2 1024 1024) (0 :: Mat.Pixel8) 5
-        markup         = FontMarkup 1.0 1.0
-        genFont        = generateFontBitmapTexture font markup Monochrome fontchars settings
-        Right fontTex  = downscaleFontTexture 1 . sdfFontTexture 4 <$> genFont
-
-    Mat.writePng "font-out.png" $ fontTex^.fontMap
-    yageMain "yage-font-sdf" appConf winSettings (mainWire fontTex) sdfRenderSystem (1/60)
+    fontTexture <- readFontTexture $ "res" </> "font" </> "ytf" </> "SourceCodePro-Regular.yft"
+    yageMain "yage-font-sdf" appConf winSettings (mainWire fontTexture) sdfRenderSystem (1/60)
 
 
 sdfRenderSystem :: YageRenderSystem SDFView ()
@@ -103,15 +96,15 @@ mainWire fontTex =
                         & buffText  .~ "A monad is just a monoid \nin the category of endofunctors"
 
         imgTex   = Mat.mkTextureImg Mat.TexY8 $ fontTex^.fontMap
-        tex      = mkTexture (fontTex^.fontMetric.fontName.packedChars) $ Texture2D imgTex
+        tex      = mkTexture ( fontTex^.fontMetric.fontName.packedChars ) $ Texture2D imgTex
 
 
     in proc _ -> do
-        scale <- integral 1 . ( whileKeyDown Key'Up . 1 <|> 0 ) -< ()
+        scale <- integrateBounded (1,10) 1 . ( whileKeyDown Key'Up . 1 <|> -1 ) -< ()
         returnA -< SDFView
             { _background = bgr
             , _gui        = emptyGUI & guiElements.at "Hallo"       ?~ GUIFont txtBuffer (idTransformation & transPosition._xy .~ V2 50 180
-                                                                                                           & transScale._xy .~ scale * V2 3 3)
+                                                                                                           & transScale._xy .~ scale *^ V2 3 3)
                                      -- & guiElements.at "FontTexture" ?~ guiImage tex txtColor (V2 0 0) (V2 800 800)
             }
 

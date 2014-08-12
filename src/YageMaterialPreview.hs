@@ -18,7 +18,8 @@ import Yage.Wire hiding ((<>), at)
 import Yage.Camera
 import Yage.Scene
 import Yage.HDR
-import Yage.Texture.Atlas
+import Yage.Texture.TextureAtlas
+import Yage.Formats.Font
 
 import Yage.UI.GUI
 
@@ -107,8 +108,8 @@ fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
             "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" ++
             "`abcdefghijklmnopqrstuvwxyz{|}~"
 
-fontPath :: String
-fontPath  = fpToString $ "res" </> "font" </> "SourceCodePro-Light.otf"
+fontPath :: FilePath
+fontPath  = "res" </> "font" </> "ytf" </> "SourceCodePro-Regular.yft"
 
 guiWire :: Real t => YageWire t () GUI
 guiWire = proc _ -> do
@@ -139,18 +140,9 @@ guiWire = proc _ -> do
                         & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
 
     where
-    loadExternalFont =
-        let descr = FontDescriptor (24^.pt, 24^.pt) (512,512)
-        in mkGenN $ \_ -> do
-            lib  <- makeLibrary
-            font <- loadFont lib fontPath descr
-
-            let fontAtlas      :: TextureAtlas Char Mat.Pixel8
-                fontAtlas      = emptyAtlas $ AtlasSettings (V2 2048 2048) (0 :: Mat.Pixel8) 5
-                markup         = FontMarkup 1.0 1.0
-                Right fontTex  = generateFontBitmapTexture font markup Monochrome fontchars fontAtlas
-
-            return $ (Right fontTex, mkConst $ Right fontTex)
+    loadExternalFont = mkGenN $ \_ -> do
+        fontTex <- readFontTexture fontPath
+        return $ (Right fontTex, mkConst $ Right fontTex)
 
 -------------------------------------------------------------------------------
 -- View Definition
