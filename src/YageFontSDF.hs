@@ -65,6 +65,7 @@ makeLenses ''SDFView
 fontPath :: FilePath
 fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular.yft"
 --fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular16.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular512.yft"
 
 fontchars :: String
 fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
