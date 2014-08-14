@@ -63,15 +63,13 @@ data SDFView = SDFView
 makeLenses ''SDFView
 
 fontPath :: FilePath
-fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular.yft"
---fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular16.yft"
---fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular512.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular512.yft"
+fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular1024.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular4096.yft"
 
-fontchars :: String
-fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
-            "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" ++
-            "`abcdefghijklmnopqrstuvwxyz{|}~"
-            -- ++ "λ"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular512.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular1024.yft"
+--fontPath  = "res" </> "font" </> "yft" </> "SourceSansPro-Regular4096.yft"
 
 
 main :: IO ()
