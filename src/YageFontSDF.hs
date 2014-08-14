@@ -103,10 +103,9 @@ mainWire fontTex =
         returnA -< SDFView
             { _background = bgr
             , _gui        = emptyGUI & guiElements.at "Hallo"       ?~ GUIFont txtBuffer (idTransformation & transPosition._xy .~ V2 50 180
-                                                                                                           & transScale._xy .~ scale *^ V2 3 3)
+                                                                                                           & transScale._xy .~ scale *^ 4.5)
                                      -- & guiElements.at "FontTexture" ?~ guiImage tex txtColor (V2 0 0) (V2 800 800)
             }
-
 
 
 instance LinearInterpolatable SDFView where
