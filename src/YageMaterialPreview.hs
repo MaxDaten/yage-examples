@@ -103,13 +103,8 @@ dummyRotationByInput =
  . smoothRotationByKey acc att (-xAxis ) Key'Down
 
 
-fontchars :: String
-fontchars = " !\"#$%&'()*+,-./0123456789:;<=>?" ++
-            "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" ++
-            "`abcdefghijklmnopqrstuvwxyz{|}~"
-
 fontPath :: FilePath
-fontPath  = "res" </> "font" </> "ytf" </> "SourceCodePro-Regular.yft"
+fontPath  = "res" </> "font" </> "yft" </> "SourceCodePro-Regular1024.yft"
 
 guiWire :: Real t => YageWire t () GUI
 guiWire = proc _ -> do
