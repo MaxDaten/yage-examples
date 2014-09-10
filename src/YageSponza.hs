@@ -115,7 +115,7 @@ simToRender CubeView{..} =
                         & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"default"<.>"png")
                         & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"floor_n"<.>"png")
                         & materials.traverse.Mat.stpFactor .~ 2.0
-        frontLight  = Light Pointlight ( LightAttributes (V4 0.4 0.4 0.4 1) (0, 1, 6) 15 )
+        frontLight  = Light Pointlight ( LightAttributes (V4 1 1 1 1) (0, 1.0/22, 1.0/300) 16 )
                         & mkLight
                         & lightRadius   .~ 5
 
@@ -125,7 +125,7 @@ simToRender CubeView{..} =
                             & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                             & entityScale .~ 1000
 
-        theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 1 (def & bloomFactor .~ 1.0)) emptyGUI
+        theScene        = emptyScene (HDRCamera _viewCamera 1.0 1.0 1.0 (def & bloomFactor .~ 1.0)) emptyGUI
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
     in (foldl' addLight theScene (genLights frontLight))

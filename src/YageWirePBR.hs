@@ -16,14 +16,23 @@ import Yage.Math
 import Yage.Wire hiding ((<>))
 
 import Yage.Camera
+import Yage.HDR
 import Yage.Scene
+import Yage.Transformation
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
 
-settings :: WindowConfig
-settings = WindowConfig
+import Yage.UI.GUI
+
+import qualified Yage.Resources as Res
+import qualified Yage.Material  as Mat
+
+
+
+winSettings :: WindowConfig
+winSettings = WindowConfig
     { windowSize = (800, 600)
-    , windowHints = 
+    , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
@@ -35,13 +44,13 @@ settings = WindowConfig
      }
 
 data SphereView = SphereView
-    { _viewCamera     :: CameraHandle
+    { _viewCamera     :: Camera
     , _theSphere      :: !Sphere
     }
     deriving (Show)
 
 data Sphere = Sphere
-    { _spherePosition    :: !(V3 Float) 
+    { _spherePosition    :: !(V3 Float)
     , _sphereOrientation :: !(Quaternion Float)
     , _sphereScale       :: !(V3 Float)
     }
@@ -50,19 +59,30 @@ makeLenses ''Sphere
 
 
 main :: IO ()
-main = yageMain "yage-cube" settings mainWire (1/60)
+main = yageMain "yage-pbr" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
 camStartPos = V3 0 0 2
+
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
-cameraKeys :: MovementKeys
-cameraKeys = MovementKeys Key'A Key'D Key'W Key'S
+
+wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled = wasdMovement (V2 2 2)
+
+mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
+
+cameraControl :: Real t => YageWire t Camera Camera
+cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
+
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () SphereView
 mainWire = proc () -> do
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
+
     sphereRot    <- sphereRotationByInput   -< ()
-    camera       <- cameraMovement camStartPos cameraKeys . cameraRotation mouseSensitivity -< fpsCamera
+    camera       <- cameraControl           -< initCamera
 
     returnA -< SphereView camera
                     (Sphere 0 sphereRot 1)
@@ -73,11 +93,11 @@ mainWire = proc () -> do
     sphereRotationByInput =
         let acc         = 20
             att         = 0.87
-        in 
-       smoothRotationByKey acc att ( yAxis ) Key'Right 
+        in
+       smoothRotationByKey acc att ( yAxis ) Key'Right
      . smoothRotationByKey acc att (-yAxis ) Key'Left
      . smoothRotationByKey acc att ( xAxis ) Key'Up
-     . smoothRotationByKey acc att (-xAxis ) Key'Down 
+     . smoothRotationByKey acc att (-xAxis ) Key'Down
      . 1
 
 
@@ -85,23 +105,48 @@ mainWire = proc () -> do
 -------------------------------------------------------------------------------
 -- View Definition
 
-instance HasScene SphereView GeoVertex LitVertex where
-    getScene SphereView{..} = 
-        let 
-            sphereE         = objEntity ( OBJFile $ "res" </> "model" </> "sphere.obj" )
-                                & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
+type SceneEntity      = GeoEntityRes
+type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 
-            envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
-            ext             = "png"
-            cubeMapFile file= envPath </> file <.> ext
-            sky             = ( skydome $ TextureCube { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft  = cubeMapFile "negx"
-                                                      , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom= cubeMapFile "negy"
-                                                      , cubeFaceFront = cubeMapFile "posz", cubeFaceBack  = cubeMapFile "negz"
-                                                      }
-                              ) & skyPosition .~ _viewCamera^.cameraLocation & skyIntensity .~ 0.8
-            theScene        = emptyScene (Camera3D _viewCamera (CameraPlanes 0.1 1000) (deg2rad 75)) 
-                                & sceneSky ?~ sky
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
-        in theScene
-            `addEntity` sphereE
-            
+
+--instance HasScene SphereView GeoVertex LitVertex where
+simToRender :: SphereView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
+simToRender SphereView{..} =
+    let sphereE         = ( boxEntity :: SceneEntity )
+                            & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
+                            & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
+
+        envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
+        ext             = "png"
+
+        mainLight       = Light Pointlight ( LightAttributes 1 (0, 1.0/20, 1.0/132) 64 )
+                            & mkLight
+                            & lightPosition .~ V3 0 0 1.5
+                            & lightRadius   .~ 3
+
+        softLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/900) 32 )
+                            & mkLight
+                            & lightPosition .~ V3 10 1 10
+                            & lightRadius   .~ 100
+
+        cubeMapFile file= envPath </> file <.> ext
+        skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
+
+        --skyCubeMap      = Res.TextureFile <$> Mat.Cube
+        --                    { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
+        --                    , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
+        --                    , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
+        --                    }
+        sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
+                            & entityPosition .~ _viewCamera^.cameraLocation
+                            & entityScale    .~ 50
+
+        camera          = HDRCamera _viewCamera 1.0 1.0 1.0 ( def & bloomFactor .~ 1.0 )
+        theScene        = emptyScene camera emptyGUI
+                            & sceneSky ?~ sky
+                            & sceneEnvironment.envAmbient .~ AmbientLight 0
+    in theScene
+        `addEntity` sphereE
+        --`addLight` mainLight
+        `addLight` softLight
+

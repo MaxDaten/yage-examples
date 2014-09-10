@@ -124,19 +124,19 @@ simToRender HeadView{..} =
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
                             & materials.traverse.stpFactor._t %~ negate
 
-            frontPLight     = Light Pointlight (LightAttributes 1 (0, 1, 6 ) 15)
+            frontPLight     = Light Pointlight (LightAttributes 1 (0, 1/10, 1/100 ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 2.5
                                           & lightRadius   .~ 5
 
-            backPLight      = Light Pointlight (LightAttributes (V4 0.3 0.3 0.5 1) (0, 0, 7 ) 30)
+            backPLight      = Light Pointlight (LightAttributes (V4 0.8 0.8 1 1) (0, 1/10, 1/200 ) 30)
                                 & mkLight & lightPosition .~ negate (V3 1 1 3)
                                           & lightRadius   .~ 5
 
-            movingPLightRed = Light Pointlight (LightAttributes (V4 2 0.4 0.4 1) (0, 2, 6 ) 15)
+            movingPLightRed = Light Pointlight (LightAttributes (V4 1 0.0 0.0 1) (0, 1/1, 1/10 ) 15)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
                                           & lightRadius   .~ 0.5
 
-            movingPLightBlue= Light Pointlight (LightAttributes (V4 4 4 4 1) ( 0, 3, 8 ) 128)
+            movingPLightBlue= Light Pointlight (LightAttributes (V4 1 1 1 1) ( 0, 1/1, 1/1 ) 128)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
                                           & lightRadius   .~ 1
 
