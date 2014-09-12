@@ -21,6 +21,8 @@ import Yage.Scene
 import Yage.Transformation
 import Yage.Pipeline.Deferred
 import Yage.Examples.Shared
+import qualified Yage.Core.OpenGL as GL
+
 
 import Yage.UI.GUI
 
@@ -62,7 +64,7 @@ main :: IO ()
 main = yageMain "yage-pbr" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
-camStartPos = V3 0 0 2
+camStartPos = V3 0 1 3
 
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
@@ -112,41 +114,64 @@ type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 --instance HasScene SphereView GeoVertex LitVertex where
 simToRender :: SphereView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
 simToRender SphereView{..} =
-    let sphereE         = ( boxEntity :: SceneEntity )
+    let sphereEntity    = ( basicEntity :: SceneEntity )
                             & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
                             & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
 
-        envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
-        ext             = "png"
+        -- The Ground
+        groundMaterial  = def & albedoMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" ) )
+                              & normalMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" ) )
+        groundEntity    = ( floorEntity :: SceneEntity )
+                            & materials         .~ (groundMaterial <&> Mat.matTransformation.transScale *~ 2.0 )
+                            & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
+                            & entityPosition    .~ V3 0 (-1) 0
+                            & entityScale       .~ V3 10 1 10
 
-        mainLight       = Light Pointlight ( LightAttributes 1 (0, 1.0/20, 1.0/132) 64 )
+        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
                             & mkLight
-                            & lightPosition .~ V3 0 0 1.5
-                            & lightRadius   .~ 3
+                            & lightPosition .~ V3 10 0 10
+                            & lightRadius   .~ 50
 
-        softLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/900) 32 )
+        softLight       = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
                             & mkLight
-                            & lightPosition .~ V3 10 1 10
+                            & lightPosition .~ V3 10 1 (-10)
                             & lightRadius   .~ 100
 
-        cubeMapFile file= envPath </> file <.> ext
-        skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
 
-        --skyCubeMap      = Res.TextureFile <$> Mat.Cube
-        --                    { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
-        --                    , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
-        --                    , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
-        --                    }
+        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
+        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
+        envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
+        ext             = "jpg"
+        cubeMapFile file= envPath </> file <.> ext
+
+        --skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
+        --skyCubeMap      = Res.TextureFile <$> pure (cubeMapFile "posx")
+
+        skyCubeMap      = Res.TextureFile <$> Mat.Cube
+                            { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
+                            , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
+                            , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
+                            }
         sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                             & entityPosition .~ _viewCamera^.cameraLocation
-                            & entityScale    .~ 50
+                            & entityScale    .~ 100
 
-        camera          = HDRCamera _viewCamera 1.0 1.0 1.0 ( def & bloomFactor .~ 1.0 )
+        bloomSettings   = defaultBloomSettings
+                            & bloomFactor           .~ 0.3
+                            & bloomPreDownsampling  .~ 4
+                            & bloomGaussPasses      .~ 3
+        camera          = defaultHDRCamera _viewCamera
+                            & hdrExposure      .~ 0.5
+                            & hdrExposureBias  .~ 1.0
+                            & hdrWhitePoint    .~ 0.5
+                            & hdrBloomSettings .~ bloomSettings
+
         theScene        = emptyScene camera emptyGUI
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight 0
     in theScene
-        `addEntity` sphereE
-        --`addLight` mainLight
+        `addEntity` sphereEntity
+        `addEntity` groundEntity
+        `addLight` mainLight
         `addLight` softLight
 
