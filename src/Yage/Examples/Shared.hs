@@ -66,10 +66,10 @@ boxEntity =
             & renderData .~ MeshPure cubeMesh
 
 
-floorEntity :: Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) (ResourceMaterial)
+floorEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat
 floorEntity =
-    let gridMesh = buildMeshUV "floor" (gridPos 25 1) (gridUV 25)
-    in ( basicEntity :: Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) ResourceMaterial )
+    let gridMesh = buildMeshUV "floor" (gridPos 1 1) (gridUV 1)
+    in ( basicEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat )
             & renderData .~ ( MeshPure gridMesh )
 
 
