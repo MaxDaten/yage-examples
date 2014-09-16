@@ -147,24 +147,30 @@ simToRender SphereView{..} =
         --skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
         --skyCubeMap      = Res.TextureFile <$> pure (cubeMapFile "posx")
 
-        skyCubeMap      = Res.TextureFile <$> Mat.Cube
+        skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
                             { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
                             , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
                             , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
                             }
-        sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                            & entityPosition .~ _viewCamera^.cameraLocation
-                            & entityScale    .~ 100
+
+        sky             = skydome skyCubeMap
+                            & entityPosition        .~ _viewCamera^.cameraLocation
+                            & entityScale           .~ 100
+                            & materials
+                                .Mat.matConfig
+                                .texConfWrapping
+                                .texWrapClamping    .~ GL.ClampToEdge
 
         bloomSettings   = defaultBloomSettings
                             & bloomFactor           .~ 0.3
                             & bloomPreDownsampling  .~ 4
                             & bloomGaussPasses      .~ 3
+
         camera          = defaultHDRCamera _viewCamera
-                            & hdrExposure      .~ 0.5
-                            & hdrExposureBias  .~ 1.0
-                            & hdrWhitePoint    .~ 0.5
-                            & hdrBloomSettings .~ bloomSettings
+                            & hdrExposure           .~ 0.5
+                            & hdrExposureBias       .~ 1.0
+                            & hdrWhitePoint         .~ 0.5
+                            & hdrBloomSettings      .~ bloomSettings
 
         theScene        = emptyScene camera emptyGUI
                             & sceneSky ?~ sky
