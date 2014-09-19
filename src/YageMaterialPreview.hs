@@ -85,7 +85,7 @@ mouseControlled :: Real t => YageWire t () (V2 Float)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
+cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
 
 
 -- Dummy Control Wires

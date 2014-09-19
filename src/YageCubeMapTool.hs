@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -61,10 +62,10 @@ makeLenses ''Sphere
 
 
 main :: IO ()
-main = yageMain "yage-pbr" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-cube-map" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 camStartPos :: V3 Float
-camStartPos = V3 0 1 3
+camStartPos = V3 0 0 2
 
 mouseSensitivity :: V2 Float
 mouseSensitivity = V2 0.1 0.1
@@ -76,12 +77,12 @@ mouseControlled :: Real t => YageWire t () (V2 Float)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = cameraMovement camStartPos wasdControlled . cameraRotation mouseControlled
+cameraControl = arcBallRotation mouseControlled . arr (0,)
 
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () SphereView
 mainWire = proc () -> do
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) (idTransformation & transPosition .~ camStartPos)
 
     sphereRot    <- sphereRotationByInput   -< ()
     camera       <- cameraControl           -< initCamera
@@ -114,46 +115,37 @@ type SceneEnvironment = Environment LitEntityRes SkyEntityRes
 --instance HasScene SphereView GeoVertex LitVertex where
 simToRender :: SphereView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
 simToRender SphereView{..} =
-    let sphereEntity    = ( basicEntity :: SceneEntity )
+    let sphereEntity     = ( basicEntity :: SceneEntity )
                             & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
                             & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
 
-        -- The Ground
-        groundMaterial  = def & albedoMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" ) )
-                              & normalMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" ) )
-        groundEntity    = ( floorEntity :: SceneEntity )
-                            & materials         .~ (groundMaterial <&> Mat.matTransformation.transScale *~ 2.0 )
-                            & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
-                            & entityPosition    .~ V3 0 (-1) 0
-                            & entityScale       .~ V3 10 1 10
 
-        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
+        mainLight        = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
                             & mkLight
                             & lightPosition .~ V3 10 0 10
                             & lightRadius   .~ 50
 
-        softLight       = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
+        softLight        = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
                             & mkLight
                             & lightPosition .~ V3 10 1 (-10)
                             & lightRadius   .~ 100
 
-
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
-        envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
-        ext             = "jpg"
-        cubeMapFile file= envPath </> file <.> ext
+        simpleColorMap   = True
+        envPath style file= "res" </> "tex" </> "env" </> style </> "small" </> file <.> "jpg"
+        cubeMapFile file = if simpleColorMap
+                                then envPath "SimpleColor" file
+                                else envPath "Sea" file
 
         --skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
         --skyCubeMap      = Res.TextureFile <$> pure (cubeMapFile "posx")
 
-        skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
+        cubeMap       = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
                             { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
                             , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
                             , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
                             }
 
-        sky             = skydome skyCubeMap
+        sky              = skydome cubeMap
                             & entityPosition        .~ _viewCamera^.cameraLocation
                             & entityScale           .~ 100
                             & materials
@@ -161,23 +153,22 @@ simToRender SphereView{..} =
                                 .texConfWrapping
                                 .texWrapClamping    .~ GL.ClampToEdge
 
-        bloomSettings   = defaultBloomSettings
+        bloomSettings    = defaultBloomSettings
                             & bloomFactor           .~ 0.3
                             & bloomPreDownsampling  .~ 4
                             & bloomGaussPasses      .~ 3
 
-        camera          = defaultHDRCamera _viewCamera
+        camera           = defaultHDRCamera _viewCamera
                             & hdrExposure           .~ 0.5
                             & hdrExposureBias       .~ 1.0
                             & hdrWhitePoint         .~ 0.5
                             & hdrBloomSettings      .~ bloomSettings
 
-        theScene        = emptyScene camera emptyGUI
+        theScene         = emptyScene camera emptyGUI
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight 0
     in theScene
         `addEntity` sphereEntity
-        `addEntity` groundEntity
         `addLight` mainLight
         `addLight` softLight
 
