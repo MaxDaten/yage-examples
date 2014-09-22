@@ -117,20 +117,23 @@ simToRender SphereView{..} =
     let sphereEntity    = ( basicEntity :: SceneEntity )
                             & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
                             & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
+                            & materials         .~ sphereMaterial
+        sphereMaterial  = defaultGeoMaterial
 
         -- The Ground
-        groundMaterial  = def & albedoMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" ) )
-                              & normalMaterial .~ ( Mat.defaultMaterialSRGB & Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" ) )
         groundEntity    = ( floorEntity :: SceneEntity )
                             & materials         .~ (groundMaterial <&> Mat.matTransformation.transScale *~ 2.0 )
                             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
                             & entityPosition    .~ V3 0 (-1) 0
                             & entityScale       .~ V3 10 1 10
+        groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
+                              & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
 
+        -- lighting
         mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
                             & mkLight
-                            & lightPosition .~ V3 10 0 10
-                            & lightRadius   .~ 50
+                            & lightPosition .~ V3 0 0 10
+                            & lightRadius   .~ 100
 
         softLight       = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
                             & mkLight
@@ -168,7 +171,7 @@ simToRender SphereView{..} =
 
         camera          = defaultHDRCamera _viewCamera
                             & hdrExposure           .~ 0.5
-                            & hdrExposureBias       .~ 1.0
+                            & hdrExposureBias       .~ 0.0
                             & hdrWhitePoint         .~ 0.5
                             & hdrBloomSettings      .~ bloomSettings
 
