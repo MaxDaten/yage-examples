@@ -121,8 +121,10 @@ simToRender HeadView{..} =
                             & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
                             & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
+                            & materials.albedoMaterial.stpFactor._t    %~ negate
+
                             & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
-                            & materials.traverse.stpFactor._t %~ negate
+                            & materials.normalMaterial.stpFactor._t    %~ negate
 
             frontPLight     = Light Pointlight (LightAttributes 1 (0, 1/10, 1/100 ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 2.5

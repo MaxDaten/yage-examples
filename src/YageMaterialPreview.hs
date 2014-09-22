@@ -163,8 +163,9 @@ simToRender MaterialView{..} =
                             & entityPosition          -~ V3 0 1 0
                             & entityScale             //~ 200
                             & materials.albedoMaterial.Mat.singleMaterial .~ Res.TextureFile albeoFile
+                            & materials.albedoMaterial.Mat.stpFactor .~ 2.0
                             & materials.normalMaterial.Mat.singleMaterial .~ Res.TextureFile normalFile
-                            & materials.traverse.Mat.stpFactor .~ 2.0
+                            & materials.normalMaterial.Mat.stpFactor .~ 2.0
 
             mainLight  = Light Pointlight ( LightAttributes 1 (0, 1.0/30, 1.0/900) 64 )
                             & mkLight

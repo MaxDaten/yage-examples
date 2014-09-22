@@ -113,8 +113,9 @@ simToRender CubeView{..} =
                         & entityTransformation    .~ _theCube
                         & entityScale             //~ 100
                         & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"default"<.>"png")
+                        & materials.albedoMaterial.Mat.stpFactor .~ 2.0
                         & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"floor_n"<.>"png")
-                        & materials.traverse.Mat.stpFactor .~ 2.0
+                        & materials.normalMaterial.Mat.stpFactor .~ 2.0
         frontLight  = Light Pointlight ( LightAttributes (V4 1 1 1 1) (0, 1.0/22, 1.0/300) 16 )
                         & mkLight
                         & lightRadius   .~ 5

@@ -73,9 +73,9 @@ floorEntity =
             & renderData .~ ( MeshPure gridMesh )
 
 
-skydome :: Material (Cube TextureResource) -> SkyEntityRes
+skydome :: FMaterial Cube MaterialColorAlpha TextureResource -> SkyEntityRes
 skydome cubeTex =
-    ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (AResourceMaterial Cube) ) -- we have to fix the functor type
+    ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (FMaterial Cube MaterialColorAlpha TextureResource) ) -- we have to fix the functor type
         & materials  .~ cubeTex
         & renderData .~ (mkFromVerticesF "SkyDome" $ map (position3 =:) . vertices . triangles $ geoSphere 2 1)
 

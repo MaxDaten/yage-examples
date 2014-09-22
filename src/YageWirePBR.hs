@@ -122,23 +122,31 @@ simToRender SphereView{..} =
 
         -- The Ground
         groundEntity    = ( floorEntity :: SceneEntity )
-                            & materials         .~ (groundMaterial <&> Mat.matTransformation.transScale *~ 2.0 )
+                            & materials         .~ groundMaterial
                             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
                             & entityPosition    .~ V3 0 (-1) 0
                             & entityScale       .~ V3 10 1 10
         groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
+                              & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
                               & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
+                              & normalMaterial.Mat.matTransformation.transScale *~ 2.0
+                              & roughnessMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_r.png" )
+                              & normalMaterial.Mat.matTransformation.transScale *~ 4.0
 
         -- lighting
-        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
+        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 64 )
                             & mkLight
-                            & lightPosition .~ V3 0 0 10
-                            & lightRadius   .~ 100
+                            & lightPosition .~ V3 0 15 10
+                            & lightRadius   .~ 50
+        secondLight     = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/1024) 1024 )
+                            & mkLight
+                            & lightPosition .~ V3 (-15) 15 (-10)
+                            & lightRadius   .~ 50
 
-        softLight       = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
+        softLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 16 )
                             & mkLight
-                            & lightPosition .~ V3 10 1 (-10)
-                            & lightRadius   .~ 100
+                            & lightPosition .~ V3 10 15 (-10)
+                            & lightRadius   .~ 50
 
 
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
@@ -182,5 +190,6 @@ simToRender SphereView{..} =
         `addEntity` sphereEntity
         `addEntity` groundEntity
         `addLight` mainLight
+        `addLight` secondLight
         `addLight` softLight
 
