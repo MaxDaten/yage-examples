@@ -131,7 +131,7 @@ simToRender SphereView{..} =
                               & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
                               & normalMaterial.Mat.matTransformation.transScale *~ 2.0
                               & roughnessMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_r.png" )
-                              & normalMaterial.Mat.matTransformation.transScale *~ 4.0
+                              & normalMaterial.Mat.matTransformation.transScale *~ 8.0
 
         -- lighting
         mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 64 )
