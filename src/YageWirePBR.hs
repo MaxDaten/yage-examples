@@ -109,14 +109,15 @@ mainWire = proc () -> do
 
 type SceneEntity      = GeoEntityRes
 type SceneEnvironment = Environment LitEntityRes SkyEntityRes
-
+type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 --instance HasScene SphereView GeoVertex LitVertex where
-simToRender :: SphereView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
+simToRender :: SphereView -> PBRScene
 simToRender SphereView{..} =
     let sphereEntity    = ( basicEntity :: SceneEntity )
                             & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
                             & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
+                            & entityScale       .~ 0.5
                             & materials         .~ sphereMaterial
         sphereMaterial  = defaultGeoMaterial
 
@@ -124,7 +125,7 @@ simToRender SphereView{..} =
         groundEntity    = ( floorEntity :: SceneEntity )
                             & materials         .~ groundMaterial
                             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
-                            & entityPosition    .~ V3 0 (-1) 0
+                            & entityPosition    .~ V3 0 (-0.75) 0
                             & entityScale       .~ V3 10 1 10
         groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
                               & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
@@ -187,9 +188,28 @@ simToRender SphereView{..} =
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight 0
     in theScene
-        `addEntity` sphereEntity
+        `addSpheres` (5, 5, V2 6 6, sphereEntity)
         `addEntity` groundEntity
         `addLight` mainLight
         `addLight` secondLight
         `addLight` softLight
 
+
+addSpheres :: PBRScene -> (Int, Int, V2 Float, SceneEntity) -> PBRScene
+addSpheres scene (xCnt, yCnt, V2 dimX dimY, sphere)
+    = foldr addSphereOnGrid scene (gridIdx `zip` positions)
+
+    where
+
+    addSphereOnGrid ((xi, yi), pos) onScene =
+        let roughValue  = xi / fromIntegral xCnt
+            newSphere   = sphere & entityPosition .~ pos
+                                 & materials.roughnessMaterial.Mat.matColor .~ (realToFrac roughValue)
+        in onScene `addEntity` newSphere
+
+    positions   = map calculatePosition gridIdx
+    gridIdx     = [ (fromIntegral xi, fromIntegral yi) | xi <- [0 .. xCnt], yi <- [0 .. yCnt] ]
+    startPoint  = V3 (-dimX / 2.0) 0 (dimY / 2.0)
+    step        = 0 & _x .~  dimX / fromIntegral xCnt
+                    & _z .~ -dimY / fromIntegral yCnt
+    calculatePosition (xi, yi) =  startPoint + V3 xi 0 yi * step
