@@ -81,7 +81,7 @@ main = do
 sdfRenderSystem :: YageRenderSystem SDFView ()
 sdfRenderSystem viewport theView = do
     guiTex <- Pass.runGuiPass (theView^.background) viewport (theView^.gui)
-    Pass.runScreenPass viewport [ theView^.background, guiTex ]
+    Pass.screenPass viewport [ theView^.background, guiTex ]
 
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => FontTexture -> YageWire t () SDFView

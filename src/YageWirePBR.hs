@@ -126,7 +126,7 @@ simToRender SphereView{..} =
                             & materials         .~ groundMaterial
                             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
                             & entityPosition    .~ V3 0 (-0.75) 0
-                            & entityScale       .~ V3 10 1 10
+                            & entityScale       .~ V3 13 1 13
         groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
                               & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
                               & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
@@ -175,20 +175,20 @@ simToRender SphereView{..} =
 
         bloomSettings   = defaultBloomSettings
                             & bloomFactor           .~ 0.3
-                            & bloomPreDownsampling  .~ 4
-                            & bloomGaussPasses      .~ 3
+                            & bloomPreDownsampling  .~ 2
+                            & bloomGaussPasses      .~ 6
 
         camera          = defaultHDRCamera _viewCamera
-                            & hdrExposure           .~ 0.5
+                            & hdrExposure           .~ 1
                             & hdrExposureBias       .~ 0.0
-                            & hdrWhitePoint         .~ 0.5
+                            & hdrWhitePoint         .~ 11.2
                             & hdrBloomSettings      .~ bloomSettings
 
         theScene        = emptyScene camera emptyGUI
                             & sceneSky ?~ sky
                             & sceneEnvironment.envAmbient .~ AmbientLight 0
     in theScene
-        `addSpheres` (5, 5, V2 6 6, sphereEntity)
+        `addSpheres` (7, 7, V2 10 10, sphereEntity)
         `addEntity` groundEntity
         `addLight` mainLight
         `addLight` secondLight

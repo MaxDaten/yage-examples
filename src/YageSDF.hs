@@ -63,7 +63,7 @@ makeLenses ''SDFView
 main :: IO ()
 main = do
     bitTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66.png"
-    sdfTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66-sdf.png"
+    sdfTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66-sdf-50perc.png"
     yageMain "yage-sdf" appConf winSettings (mainWire bitTexture sdfTexture) sdfRenderSystem (1/60)
 
 
@@ -71,7 +71,7 @@ main = do
 sdfRenderSystem :: YageRenderSystem SDFView ()
 sdfRenderSystem viewport theView = do
     guiTex <- Pass.runGuiPass (theView^.background) viewport (theView^.gui)
-    Pass.runScreenPass viewport [ theView^.background, guiTex ]
+    Pass.screenPass viewport [ theView^.background, guiTex ]
 
 
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => Texture -> Texture -> YageWire t () SDFView
