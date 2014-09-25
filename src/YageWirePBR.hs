@@ -174,12 +174,12 @@ simToRender SphereView{..} =
                                 .texWrapClamping    .~ GL.ClampToEdge
 
         bloomSettings   = defaultBloomSettings
-                            & bloomFactor           .~ 0.3
+                            & bloomFactor           .~ 0.5
                             & bloomPreDownsampling  .~ 2
                             & bloomGaussPasses      .~ 6
 
         camera          = defaultHDRCamera _viewCamera
-                            & hdrExposure           .~ 1
+                            & hdrExposure           .~ 2
                             & hdrExposureBias       .~ 0.0
                             & hdrWhitePoint         .~ 11.2
                             & hdrBloomSettings      .~ bloomSettings
@@ -202,7 +202,7 @@ addSpheres scene (xCnt, yCnt, V2 dimX dimY, sphere)
     where
 
     addSphereOnGrid ((xi, yi), pos) onScene =
-        let roughValue  = xi / fromIntegral xCnt
+        let roughValue  = 0.2 + xi / fromIntegral xCnt
             newSphere   = sphere & entityPosition .~ pos
                                  & materials.roughnessMaterial.Mat.matColor .~ (realToFrac roughValue)
         in onScene `addEntity` newSphere
