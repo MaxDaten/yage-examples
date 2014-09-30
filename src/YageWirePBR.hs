@@ -127,6 +127,7 @@ simToRender SphereView{..} =
                             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
                             & entityPosition    .~ V3 0 (-0.75) 0
                             & entityScale       .~ V3 13 1 13
+
         groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
                               & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
                               & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
@@ -174,7 +175,7 @@ simToRender SphereView{..} =
                                 .texWrapClamping    .~ GL.ClampToEdge
 
         bloomSettings   = defaultBloomSettings
-                            & bloomFactor           .~ 0.5
+                            & bloomFactor           .~ 1
                             & bloomPreDownsampling  .~ 2
                             & bloomGaussPasses      .~ 6
 
