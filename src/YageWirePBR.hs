@@ -40,8 +40,9 @@ winSettings = WindowConfig
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
         , WindowHint'OpenGLForwardCompat  True
         , WindowHint'RefreshRate          60
-        --, WindowHint'Resizable            False
-        --, WindowHint'Decorated            False
+        -- , WindowHint'OpenGLDebugContext   True
+        -- , WindowHint'Resizable            False
+        -- , WindowHint'Decorated            False
         ]
      }
 
@@ -172,12 +173,15 @@ simToRender SphereView{..} =
                             & materials
                                 .Mat.matConfig
                                 .texConfWrapping
-                                .texWrapClamping    .~ GL.ClampToEdge
+                                .texWrapClamping        .~ GL.ClampToEdge
+                            & materials.Mat.matColor    .~ Mat.opaque (Mat.rgb 2.0 2.0 2.0)
 
         bloomSettings   = defaultBloomSettings
-                            & bloomFactor           .~ 1
+                            & bloomFactor           .~ 0.7
                             & bloomPreDownsampling  .~ 2
-                            & bloomGaussPasses      .~ 6
+                            & bloomGaussPasses      .~ 5
+                            & bloomWidth            .~ 2
+                            & bloomThreshold        .~ 0.6
 
         camera          = defaultHDRCamera _viewCamera
                             & hdrExposure           .~ 2

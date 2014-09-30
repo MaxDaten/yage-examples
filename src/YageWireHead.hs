@@ -21,8 +21,14 @@ import           Yage.Scene
 import           Yage.HDR
 import           Yage.UI.GUI
 import qualified Yage.Resources as Res
-import           Yage.Material
+import qualified Yage.Material  as Mat
 import           Yage.Pipeline.Deferred
+import           Yage.Transformation
+
+import           Yage.Examples.Shared
+
+import qualified Yage.Core.OpenGL as GL
+
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
@@ -120,30 +126,56 @@ simToRender HeadView{..} =
                             & entityPosition     .~ V3 0 0.5 0
                             & entityScale        .~ 4
                             & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
-                            & materials.albedoMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
-                            & materials.albedoMaterial.stpFactor._t    %~ negate
+                            & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
+                            & materials.albedoMaterial.Mat.stpFactor._t    %~ negate
 
-                            & materials.normalMaterial.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
-                            & materials.normalMaterial.stpFactor._t    %~ negate
+                            & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
+                            & materials.normalMaterial.Mat.stpFactor._t    %~ negate
 
-            frontPLight     = Light Pointlight (LightAttributes 1 (0, 1/10, 1/100 ) 15)
+            blackTexture    = mkTexture "SKYE" $ Texture2D $ Mat.pxTexture Mat.TexSRGB8 Mat.black
+            skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ pure $ Res.TexturePure blackTexture
+
+            sky             = skydome skyCubeMap
+                            & entityPosition        .~ _viewCamera^.cameraLocation
+                            & entityScale           .~ 100
+                            & materials
+                                .Mat.matConfig
+                                .texConfWrapping
+                                .texWrapClamping        .~ GL.ClampToEdge
+
+            frontPLight     = Light Pointlight (LightAttributes 1 (0, 0, 1/64 ) 15)
                                 & mkLight & lightPosition .~ V3 0 0.5 2.5
-                                          & lightRadius   .~ 5
+                                          & lightRadius   .~ 10
 
-            backPLight      = Light Pointlight (LightAttributes (V4 0.8 0.8 1 1) (0, 1/10, 1/200 ) 30)
+            backPLight      = Light Pointlight (LightAttributes (V4 0.8 0.8 1 1) (0, 0, 1/256 ) 30)
                                 & mkLight & lightPosition .~ negate (V3 1 1 3)
-                                          & lightRadius   .~ 5
+                                          & lightRadius   .~ 10
 
-            movingPLightRed = Light Pointlight (LightAttributes (V4 1 0.0 0.0 1) (0, 1/1, 1/10 ) 15)
+            movingPLightRed = Light Pointlight (LightAttributes (V4 1 0.0 0.0 1) (0, 0, 1/1024 ) 1024)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
-                                          & lightRadius   .~ 0.5
+                                          & lightRadius   .~ 1
 
-            movingPLightBlue= Light Pointlight (LightAttributes (V4 1 1 1 1) ( 0, 1/1, 1/1 ) 128)
+            movingPLightBlue= Light Pointlight (LightAttributes (V4 1 1 1 1) ( 0, 0, 1/64 ) 128)
                                 & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
                                           & lightRadius   .~ 1
 
-            theScene        = emptyScene (HDRCamera _viewCamera 0.5 1.0 2 (def::HDRBloomSettings)) emptyGUI
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
+
+            bloomSettings   = defaultBloomSettings
+                                & bloomFactor           .~ 1
+                                & bloomPreDownsampling  .~ 2
+                                & bloomGaussPasses      .~ 7
+                                & bloomWidth            .~ 2
+                                & bloomThreshold        .~ 0.6
+
+            camera          = defaultHDRCamera _viewCamera
+                                & hdrExposure           .~ 1
+                                & hdrExposureBias       .~ 0.0
+                                & hdrWhitePoint         .~ 11.2
+                                & hdrBloomSettings      .~ bloomSettings
+
+            theScene        = emptyScene camera emptyGUI
+                                & sceneSky ?~ sky
+                                & sceneEnvironment.envAmbient .~ AmbientLight 0
         in theScene
             `addEntity` objE
 
