@@ -47,7 +47,7 @@ winSettings = WindowConfig
 appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
-type Dummy = Transformation Float
+type Dummy = Transformation Double
 
 data MaterialView = MaterialView
     { _viewCamera     :: Camera
@@ -62,7 +62,7 @@ main :: IO ()
 main = yageMain "yage-material" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () MaterialView
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () MaterialView
 mainWire =
     let initCamera = mkCameraFps (deg2rad 75) (0.1,10000) $ idTransformation & transOrientation .~ axisAngle (V3 1 0 0) (deg2rad $ -15)
     -- warning, camera init position will be overidden by cam starting pos (we integrate the position in the camerMovement wire)
@@ -72,16 +72,16 @@ mainWire =
 
 
 -- Camera Control Wires
-camStartPos :: V3 Float
+camStartPos :: V3 Double
 camStartPos = V3 0 0 1.5
 
-mouseSensitivity :: V2 Float
+mouseSensitivity :: V2 Double
 mouseSensitivity = V2 0.1 0.1
 
-wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
@@ -92,7 +92,7 @@ cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation
 dummyControl :: Real t => YageWire t Dummy Dummy
 dummyControl = overA transOrientation dummyRotationByInput
 
-dummyRotationByInput :: (Real t) => YageWire t (Quaternion Float) (Quaternion Float)
+dummyRotationByInput :: (Real t) => YageWire t (Quaternion Double) (Quaternion Double)
 dummyRotationByInput =
     let acc         = 20
         att         = 0.87
@@ -144,7 +144,7 @@ guiWire = proc _ -> do
 
 
 type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+type SceneEnvironment = Environment Light SkyEntityRes
 
 
 texDir :: FilePath
@@ -167,14 +167,15 @@ simToRender MaterialView{..} =
                             & materials.normalMaterial.Mat.singleMaterial .~ Res.TextureFile normalFile
                             & materials.normalMaterial.Mat.stpFactor .~ 2.0
 
-            mainLight  = Light Pointlight ( LightAttributes 1 (0, 1.0/30, 1.0/900) 64 )
-                            & mkLight
-                            & lightPosition .~ V3 15 1 15
-                            & lightRadius   .~ 100
-            specLight  = Light Pointlight ( LightAttributes 1 (0, 1.0/30, 1.0/20) 128 )
-                            & mkLight
-                            & lightPosition .~ V3 2 1 2
-                            & lightRadius   .~ 10
+            mainLight  = Light
+                            { _lightType  = Pointlight (V3 15 1 15) 100
+                            , _lightColor = V3 1.0 1.0 1.0
+                            }
+
+            specLight  = Light
+                            { _lightType  = Pointlight (V3 2 1 2) 10
+                            , _lightColor = V3 1.0 1.0 1.0
+                            }
 
             skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
             sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )

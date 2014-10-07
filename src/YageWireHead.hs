@@ -47,15 +47,15 @@ winSettings = WindowConfig
 data HeadView = HeadView
     { _viewCamera     :: !Camera
     , _theHead        :: !Head
-    , _lightPosRed    :: !(V3 Float)
-    , _lightPosBlue   :: !(V3 Float)
+    , _lightPosRed    :: !(V3 Double)
+    , _lightPosBlue   :: !(V3 Double)
     }
     deriving (Show)
 
 data Head = Head
-    { _headPosition    :: !(V3 Float)
-    , _headOrientation :: !(Quaternion Float)
-    , _headScale       :: !(V3 Float)
+    { _headPosition    :: !(V3 Double)
+    , _headOrientation :: !(Quaternion Double)
+    , _headScale       :: !(V3 Double)
     }
     deriving (Show)
 
@@ -66,23 +66,23 @@ makeLenses ''Head
 main :: IO ()
 main = yageMain "yage-head" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
-camStartPos :: V3 Float
+camStartPos :: V3 Double
 camStartPos = V3 0 0.1 1
 
-mouseSensitivity :: V2 Float
+mouseSensitivity :: V2 Double
 mouseSensitivity = V2 0.1 0.1
 
-wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () HeadView
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () HeadView
 mainWire = proc () -> do
     let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
 
@@ -97,7 +97,7 @@ mainWire = proc () -> do
                     (lightPosBlue)
 
 
-headRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+headRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
 headRotationByInput =
     let acc         = 20
         att         = 0.87
@@ -114,7 +114,7 @@ headRotationByInput =
 -------------------------------------------------------------------------------
 -- View Definition
 type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+type SceneEnvironment = Environment Light SkyEntityRes
 
 simToRender :: HeadView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
 simToRender HeadView{..} =
@@ -143,22 +143,25 @@ simToRender HeadView{..} =
                                 .texConfWrapping
                                 .texWrapClamping        .~ GL.ClampToEdge
 
-            frontPLight     = Light Pointlight (LightAttributes 1 (0, 0, 1/64 ) 15)
-                                & mkLight & lightPosition .~ V3 0 0.5 2.5
-                                          & lightRadius   .~ 10
+            frontPLight     = Light
+                                { _lightType  = Pointlight (V3 0 0.5 2.5) 10
+                                , _lightColor = V3 1 1 1
+                                }
 
-            backPLight      = Light Pointlight (LightAttributes (V4 0.8 0.8 1 1) (0, 0, 1/256 ) 30)
-                                & mkLight & lightPosition .~ negate (V3 1 1 3)
-                                          & lightRadius   .~ 10
+            backPLight      = Light
+                                { _lightType  = Pointlight (negate (V3 1 1 3)) 30
+                                , _lightColor = V3 0.8 0.8 1
+                                }
 
-            movingPLightRed = Light Pointlight (LightAttributes (V4 1 0.0 0.0 1) (0, 0, 1/1024 ) 1024)
-                                & mkLight & lightPosition .~ (realToFrac <$> _lightPosRed)
-                                          & lightRadius   .~ 1
+            movingPLightRed = Light
+                                { _lightType  = Pointlight _lightPosRed 1
+                                , _lightColor = V3 1.0 0.0 0.0
+                                }
 
-            movingPLightBlue= Light Pointlight (LightAttributes (V4 1 1 1 1) ( 0, 0, 1/64 ) 128)
-                                & mkLight & lightPosition .~ (realToFrac <$> _lightPosBlue)
-                                          & lightRadius   .~ 1
-
+            movingPLightBlue= Light
+                                { _lightType  = Pointlight _lightPosBlue 1
+                                , _lightColor = V3 1.0 1.0 1.0
+                                }
 
             bloomSettings   = defaultBloomSettings
                                 & bloomFactor           .~ 1

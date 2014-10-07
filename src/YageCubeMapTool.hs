@@ -53,9 +53,9 @@ data SphereView = SphereView
     deriving (Show)
 
 data Sphere = Sphere
-    { _spherePosition    :: !(V3 Float)
-    , _sphereOrientation :: !(Quaternion Float)
-    , _sphereScale       :: !(V3 Float)
+    { _spherePosition    :: !(V3 Double)
+    , _sphereOrientation :: !(Quaternion Double)
+    , _sphereScale       :: !(V3 Double)
     }
     deriving (Show)
 makeLenses ''Sphere
@@ -64,23 +64,23 @@ makeLenses ''Sphere
 main :: IO ()
 main = yageMain "yage-cube-map" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
-camStartPos :: V3 Float
+camStartPos :: V3 Double
 camStartPos = V3 0 0 2
 
-mouseSensitivity :: V2 Float
+mouseSensitivity :: V2 Double
 mouseSensitivity = V2 0.1 0.1
 
-wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,)
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () SphereView
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () SphereView
 mainWire = proc () -> do
     let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) (idTransformation & transPosition .~ camStartPos)
 
@@ -92,7 +92,7 @@ mainWire = proc () -> do
 
     where
 
-    sphereRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+    sphereRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
     sphereRotationByInput =
         let acc         = 20
             att         = 0.87
@@ -109,7 +109,7 @@ mainWire = proc () -> do
 -- View Definition
 
 type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+type SceneEnvironment = Environment Light SkyEntityRes
 
 
 --instance HasScene SphereView GeoVertex LitVertex where
@@ -120,15 +120,15 @@ simToRender SphereView{..} =
                             & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
 
 
-        mainLight        = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/32) 64 )
-                            & mkLight
-                            & lightPosition .~ V3 10 0 10
-                            & lightRadius   .~ 50
+        mainLight        = Light
+                            { _lightType  = Pointlight (V3 10 0 10) 50
+                            , _lightColor = 250
+                            }
 
-        softLight        = Light Pointlight ( LightAttributes 1 (0, 1/8, 1.0/68) 16 )
-                            & mkLight
-                            & lightPosition .~ V3 10 1 (-10)
-                            & lightRadius   .~ 100
+        softLight        = Light
+                            { _lightType  = Pointlight (V3 10 1 (-10)) 100
+                            , _lightColor = 1
+                            }
 
         simpleColorMap   = True
         envPath style file= "res" </> "tex" </> "env" </> style </> "small" </> file <.> "jpg"

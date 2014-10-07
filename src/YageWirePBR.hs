@@ -53,9 +53,9 @@ data SphereView = SphereView
     deriving (Show)
 
 data Sphere = Sphere
-    { _spherePosition    :: !(V3 Float)
-    , _sphereOrientation :: !(Quaternion Float)
-    , _sphereScale       :: !(V3 Float)
+    { _spherePosition    :: !(V3 Double)
+    , _sphereOrientation :: !(Quaternion Double)
+    , _sphereScale       :: !(V3 Double)
     }
     deriving (Show)
 makeLenses ''Sphere
@@ -64,25 +64,25 @@ makeLenses ''Sphere
 main :: IO ()
 main = yageMain "yage-pbr" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
 
-camStartPos :: V3 Float
+camStartPos :: V3 Double
 camStartPos = V3 0 1 3
 
-mouseSensitivity :: V2 Float
+mouseSensitivity :: V2 Double
 mouseSensitivity = V2 0.1 0.1
 
-wasdControlled :: Real t => YageWire t () (V3 Float)
+wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: Real t => YageWire t () (V2 Float)
+mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () SphereView
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () SphereView
 mainWire = proc () -> do
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
+    let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0) idTransformation
 
     sphereRot    <- sphereRotationByInput   -< ()
     camera       <- cameraControl           -< initCamera
@@ -92,7 +92,7 @@ mainWire = proc () -> do
 
     where
 
-    sphereRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
+    sphereRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
     sphereRotationByInput =
         let acc         = 20
             att         = 0.87
@@ -109,7 +109,7 @@ mainWire = proc () -> do
 -- View Definition
 
 type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+type SceneEnvironment = Environment Light SkyEntityRes
 type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 --instance HasScene SphereView GeoVertex LitVertex where
@@ -137,20 +137,25 @@ simToRender SphereView{..} =
                               & normalMaterial.Mat.matTransformation.transScale *~ 8.0
 
         -- lighting
-        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 64 )
-                            & mkLight
-                            & lightPosition .~ V3 0 15 10
-                            & lightRadius   .~ 50
-        secondLight     = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/1024) 1024 )
-                            & mkLight
-                            & lightPosition .~ V3 (-15) 15 (-10)
-                            & lightRadius   .~ 50
+        mainLight       = Light
+                            { _lightType  = Pointlight { _pLightPosition = V3 0 10 0
+                                                       , _pLightRadius = 15
+                                                       }
+                            , _lightColor = 50
+                            }
+        secondLight     = Light
+                            { _lightType  = Pointlight { _pLightPosition = V3 (-10) 10 0
+                                                       , _pLightRadius = 15
+                                                       }
+                            , _lightColor = 50
+                            }
 
-        softLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 16 )
-                            & mkLight
-                            & lightPosition .~ V3 10 15 (-10)
-                            & lightRadius   .~ 50
-
+        softLight       = Light
+                            { _lightType  = Pointlight { _pLightPosition = V3 10 10 0
+                                                       , _pLightRadius = 15
+                                                       }
+                            , _lightColor = 50
+                            }
 
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
@@ -181,7 +186,7 @@ simToRender SphereView{..} =
                             & bloomPreDownsampling  .~ 2
                             & bloomGaussPasses      .~ 5
                             & bloomWidth            .~ 2
-                            & bloomThreshold        .~ 0.6
+                            & bloomThreshold        .~ 0.5
 
         camera          = defaultHDRCamera _viewCamera
                             & hdrExposure           .~ 2
@@ -196,11 +201,11 @@ simToRender SphereView{..} =
         `addSpheres` (7, 7, V2 10 10, sphereEntity)
         `addEntity` groundEntity
         `addLight` mainLight
-        `addLight` secondLight
-        `addLight` softLight
+        -- `addLight` secondLight
+        -- `addLight` softLight
 
 
-addSpheres :: PBRScene -> (Int, Int, V2 Float, SceneEntity) -> PBRScene
+addSpheres :: PBRScene -> (Int, Int, V2 Double, SceneEntity) -> PBRScene
 addSpheres scene (xCnt, yCnt, V2 dimX dimY, sphere)
     = foldr addSphereOnGrid scene (gridIdx `zip` positions)
 
