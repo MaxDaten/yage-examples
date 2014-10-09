@@ -130,31 +130,50 @@ simToRender SphereView{..} =
                             & entityScale       .~ V3 13 1 13
 
         groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
-                              & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
+                              & albedoMaterial.Mat.matTransformation.transScale *~ 4.0
                               & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
                               & normalMaterial.Mat.matTransformation.transScale *~ 2.0
                               & roughnessMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_r.png" )
-                              & normalMaterial.Mat.matTransformation.transScale *~ 8.0
+                              & normalMaterial.Mat.matTransformation.transScale *~ 2.0
 
         -- lighting
+        spotLight01       = makeSpotlight ( V3 8 8 0 )
+                                          ( negate $ V3 8 8 0 )
+                                          45 60
+                                          ( V3 1 0.0 0.0 ) 1
+
+        spotLight02       = makeSpotlight ( V3 (-8) 8 0 )
+                                          ( V3 8 (-8) 0 )
+                                          45 60
+                                          ( V3 0.0 1 0 ) 1
+
+        spotLight03       = makeSpotlight ( V3 0 8 8 )
+                                          ( V3 8 (-8) (-8) )
+                                          10 60
+                                          ( V3 0 0.0 1 ) 1
+
         mainLight       = Light
                             { _lightType  = Pointlight { _pLightPosition = V3 0 10 0
-                                                       , _pLightRadius = 15
+                                                       , _pLightRadius = 20
                                                        }
-                            , _lightColor = 50
+                            , _lightIntensity = 10
+                            , _lightColor = 1
                             }
+
         secondLight     = Light
-                            { _lightType  = Pointlight { _pLightPosition = V3 (-10) 10 0
+                            { _lightType  = Pointlight { _pLightPosition = V3 (-15) 10 0
                                                        , _pLightRadius = 15
                                                        }
-                            , _lightColor = 50
+                            , _lightIntensity = 10
+                            , _lightColor = 1
                             }
 
         softLight       = Light
-                            { _lightType  = Pointlight { _pLightPosition = V3 10 10 0
+                            { _lightType  = Pointlight { _pLightPosition = V3 15 10 0
                                                        , _pLightRadius = 15
                                                        }
-                            , _lightColor = 50
+                            , _lightIntensity = 10
+                            , _lightColor = 1
                             }
 
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
@@ -200,7 +219,10 @@ simToRender SphereView{..} =
     in theScene
         `addSpheres` (7, 7, V2 10 10, sphereEntity)
         `addEntity` groundEntity
-        `addLight` mainLight
+        `addLight` spotLight01
+        `addLight` spotLight02
+        `addLight` spotLight03
+        -- `addLight` mainLight
         -- `addLight` secondLight
         -- `addLight` softLight
 
