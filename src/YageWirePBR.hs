@@ -121,6 +121,7 @@ simToRender SphereView{..} =
                             & entityScale       .~ 0.5
                             & materials         .~ sphereMaterial
         sphereMaterial  = defaultGeoMaterial
+                            & albedoMaterial.Mat.matColor .~ Mat.opaque Mat.dimgray
 
         -- The Ground
         groundEntity    = ( floorEntity :: SceneEntity )
@@ -138,19 +139,19 @@ simToRender SphereView{..} =
 
         -- lighting
         spotLight01       = makeSpotlight ( V3 8 8 0 )
-                                          ( negate $ V3 5 5 0 )
-                                          20 60
-                                          ( V3 1 0.4 0.4 ) 1
+                                          ( V3 (-5) (-5) 0 )
+                                          50 60
+                                          ( V3 1 0 0 ) 1
 
         spotLight02       = makeSpotlight ( V3 (-8) 8 0 )
                                           ( V3 5 (-5) 0 )
-                                          20 60
-                                          ( V3 0.4 1.4 0 ) 1
+                                          50 60
+                                          ( V3 0 1 0 ) 1
 
         spotLight03       = makeSpotlight ( V3 0 8 8 )
                                           ( V3 0 (-5) (-5) )
-                                          20 60
-                                          ( V3 0.4 0.4 1 ) 1
+                                          50 60
+                                          ( V3 0.1 0.1 1 ) 1
 
         mainLight       = Light
                             { _lightType  = Pointlight { _pLightPosition = V3 0 10 0
