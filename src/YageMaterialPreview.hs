@@ -157,36 +157,49 @@ meshFile    = "res" </> "model" </> "meshpreview" <.> "ygm"
 
 simToRender :: MaterialView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
 simToRender MaterialView{..} =
-        let boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData              .~ Res.MeshFile ( meshFile, mkSelection [] ) Res.YGMFile
-                            & entityTransformation    .~ _dummy
-                            & entityPosition          -~ V3 0 1 0
-                            & entityScale             //~ 200
-                            & materials.albedoMaterial.Mat.singleMaterial .~ Res.TextureFile albeoFile
-                            & materials.albedoMaterial.Mat.stpFactor .~ 2.0
-                            & materials.normalMaterial.Mat.singleMaterial .~ Res.TextureFile normalFile
-                            & materials.normalMaterial.Mat.stpFactor .~ 2.0
+    let boxE        = ( boxEntity :: GeoEntityRes )
+                        & renderData              .~ Res.MeshFile ( meshFile, mkSelection [] ) Res.YGMFile
+                        & entityTransformation    .~ _dummy
+                        & entityPosition          -~ V3 0 1 0
+                        & entityScale             //~ 200
+                        & materials.albedoMaterial.Mat.singleMaterial .~ Res.TextureFile albeoFile
+                        & materials.albedoMaterial.Mat.stpFactor .~ 2.0
+                        & materials.normalMaterial.Mat.singleMaterial .~ Res.TextureFile normalFile
+                        & materials.normalMaterial.Mat.stpFactor .~ 2.0
 
-            mainLight  = Light
-                            { _lightType  = Pointlight (V3 15 1 15) 100
-                            , _lightColor = V3 1.0 1.0 1.0
-                            }
+        mainLight  = Light
+                        { _lightType      = Pointlight (V3 15 1 15) 100
+                        , _lightColor     = V3 1.0 1.0 1.0
+                        , _lightIntensity = 0.5
+                        }
 
-            specLight  = Light
-                            { _lightType  = Pointlight (V3 2 1 2) 10
-                            , _lightColor = V3 1.0 1.0 1.0
-                            }
+        specLight  = Light
+                        { _lightType      = Pointlight (V3 2 1 2) 10
+                        , _lightColor     = V3 1.0 1.0 1.0
+                        , _lightIntensity = 1
+                        }
 
-            skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-            sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                                & entityPosition .~ _viewCamera^.cameraLocation
-                                & entityScale    .~ 50
+        skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
+        sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
+                            & entityPosition .~ _viewCamera^.cameraLocation
+                            & entityScale    .~ 50
 
-            camera          = HDRCamera _viewCamera 1 1.0 1.0 (def & bloomFactor .~ 1)
+        bloomSettings   = defaultBloomSettings
+                            & bloomFactor           .~ 0.7
+                            & bloomPreDownsampling  .~ 2
+                            & bloomGaussPasses      .~ 5
+                            & bloomWidth            .~ 2
+                            & bloomThreshold        .~ 0.5
 
-            theScene        = emptyScene camera _gui
-                                & sceneSky ?~ sky
-                                & sceneEnvironment.envAmbient .~ AmbientLight 0
+        camera          = defaultHDRCamera _viewCamera
+                            & hdrExposure           .~ 2
+                            & hdrExposureBias       .~ 0.0
+                            & hdrWhitePoint         .~ 11.2
+                            & hdrBloomSettings      .~ bloomSettings
+
+        theScene        = emptyScene camera _gui
+                            & sceneSky ?~ sky
+                            & sceneEnvironment.envAmbient .~ AmbientLight 0
         in theScene
             `addEntity` boxE
             `addLight` mainLight

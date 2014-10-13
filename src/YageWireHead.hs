@@ -144,23 +144,27 @@ simToRender HeadView{..} =
                                 .texWrapClamping        .~ GL.ClampToEdge
 
             frontPLight     = Light
-                                { _lightType  = Pointlight (V3 0 0.5 2.5) 10
-                                , _lightColor = V3 1 1 1
+                                { _lightType      = Pointlight (V3 0 0.5 2.5) 10
+                                , _lightColor     = V3 1 1 1
+                                , _lightIntensity = 1
                                 }
 
             backPLight      = Light
                                 { _lightType  = Pointlight (negate (V3 1 1 3)) 30
                                 , _lightColor = V3 0.8 0.8 1
+                                , _lightIntensity = 1
                                 }
 
             movingPLightRed = Light
                                 { _lightType  = Pointlight _lightPosRed 1
                                 , _lightColor = V3 1.0 0.0 0.0
+                                , _lightIntensity = 1
                                 }
 
             movingPLightBlue= Light
                                 { _lightType  = Pointlight _lightPosBlue 1
                                 , _lightColor = V3 1.0 1.0 1.0
+                                , _lightIntensity = 1
                                 }
 
             bloomSettings   = defaultBloomSettings

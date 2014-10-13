@@ -117,8 +117,9 @@ simToRender CubeView{..} =
                         & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"floor_n"<.>"png")
                         & materials.normalMaterial.Mat.stpFactor .~ 2.0
         baseLight p = Light
-                        { _lightType  = Pointlight p 5
-                        , _lightColor = V3 1.0 1.0 1.0
+                        { _lightType      = Pointlight p 10
+                        , _lightColor     = V3 1.0 1.0 1.0
+                        , _lightIntensity = 0.1
                         }
 
 
@@ -127,9 +128,22 @@ simToRender CubeView{..} =
                             & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                             & entityScale .~ 1000
 
-        theScene        = emptyScene (HDRCamera _viewCamera 1.0 1.0 1.0 (def & bloomFactor .~ 1.0)) emptyGUI
+        bloomSettings   = defaultBloomSettings
+                            & bloomFactor           .~ 0.7
+                            & bloomPreDownsampling  .~ 2
+                            & bloomGaussPasses      .~ 5
+                            & bloomWidth            .~ 2
+                            & bloomThreshold        .~ 0.5
+
+        camera          = defaultHDRCamera _viewCamera
+                            & hdrExposure           .~ 2
+                            & hdrExposureBias       .~ 0.0
+                            & hdrWhitePoint         .~ 11.2
+                            & hdrBloomSettings      .~ bloomSettings
+
+        theScene        = emptyScene camera emptyGUI
                             & sceneSky ?~ sky
-                            & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.01 0.01 0.01)
+                            & sceneEnvironment.envAmbient .~ AmbientLight 0
     in (foldl' addLight theScene (genLights baseLight))
         `addEntity` boxE
     where

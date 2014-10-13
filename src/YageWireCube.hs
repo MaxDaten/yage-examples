@@ -105,32 +105,45 @@ type SceneEnvironment = Environment Light SkyEntityRes
 
 simToRender :: CubeView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
 simToRender CubeView{..} =
-        let texDir      = "res" </> "tex"
-            ext         = "png"
-            boxE        = ( boxEntity :: GeoEntityRes )
-                            & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] ) Res.YGMFile
-                            -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "cube_groups.obj", ["cube"] ) Res.OBJFile
-                            -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "Cube.OBJ", [] ) Res.OBJFile
-                            -- & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage/test/res/cube-textures.obj", ["left", "top", "back", "front", "bottom", "right"] ) Res.OBJFile
-                            & entityTransformation    .~ _theCube
-                            & entityScale             //~ 2
-                            & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
-                            & materials.albedoMaterial.Mat.stpFactor .~ 2.0
-                            & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
-                            & materials.normalMaterial.Mat.stpFactor .~ 2.0
-            frontLight  = Light
-                            { _lightType  = Pointlight (V3 25 1 25) 100
-                            , _lightColor = V3 0.4 0.4 0.5
-                            }
+    let texDir      = "res" </> "tex"
+        ext         = "png"
+        boxE        = ( boxEntity :: GeoEntityRes )
+                        & renderData              .~ Res.MeshFile ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] ) Res.YGMFile
+                        -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "cube_groups.obj", ["cube"] ) Res.OBJFile
+                        -- & renderData              .~ Res.MeshFile ( "res" </> "model" </> "obj" </> "Cube.OBJ", [] ) Res.OBJFile
+                        -- & renderData              .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage/test/res/cube-textures.obj", ["left", "top", "back", "front", "bottom", "right"] ) Res.OBJFile
+                        & entityTransformation    .~ _theCube
+                        & entityScale             //~ 2
+                        & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_d" <.> ext)
+                        & materials.albedoMaterial.Mat.stpFactor .~ 2.0
+                        & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "floor_n" <.> ext)
+                        & materials.normalMaterial.Mat.stpFactor .~ 2.0
+        frontLight  = Light
+                        { _lightType      = Pointlight (V3 25 1 25) 100
+                        , _lightColor     = V3 0.4 0.4 0.5
+                        , _lightIntensity = 0.1
+                        }
 
-            skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-            sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                                & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
-                                & entityScale .~ 50
+        skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
+        sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
+                            & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
+                            & entityScale .~ 50
+        bloomSettings   = defaultBloomSettings
+                            & bloomFactor           .~ 0.7
+                            & bloomPreDownsampling  .~ 2
+                            & bloomGaussPasses      .~ 5
+                            & bloomWidth            .~ 2
+                            & bloomThreshold        .~ 0.5
 
-            theScene        = emptyScene (HDRCamera _viewCamera 1.0 1.0 2 def) emptyGUI
-                                & sceneSky ?~ sky
-                                & sceneEnvironment.envAmbient .~ AmbientLight (V3 0.1 0.1 0.1)
+        camera          = defaultHDRCamera _viewCamera
+                            & hdrExposure           .~ 2
+                            & hdrExposureBias       .~ 0.0
+                            & hdrWhitePoint         .~ 11.2
+                            & hdrBloomSettings      .~ bloomSettings
+
+        theScene        = emptyScene camera emptyGUI
+                            & sceneSky ?~ sky
+                            & sceneEnvironment.envAmbient .~ AmbientLight 0
         in theScene
             `addEntity` boxE
             `addLight` frontLight
