@@ -128,6 +128,7 @@ simToRender CubeView{..} =
         sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
                             & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
                             & entityScale .~ 50
+
         bloomSettings   = defaultBloomSettings
                             & bloomFactor           .~ 0.7
                             & bloomPreDownsampling  .~ 2

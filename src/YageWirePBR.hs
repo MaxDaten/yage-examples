@@ -153,29 +153,7 @@ simToRender SphereView{..} =
                                           50 60
                                           ( V3 0.1 0.1 1 ) 1
 
-        mainLight       = Light
-                            { _lightType  = Pointlight { _pLightPosition = V3 0 10 0
-                                                       , _pLightRadius = 20
-                                                       }
-                            , _lightIntensity = 10
-                            , _lightColor = 1
-                            }
-
-        secondLight     = Light
-                            { _lightType  = Pointlight { _pLightPosition = V3 (-15) 10 0
-                                                       , _pLightRadius = 15
-                                                       }
-                            , _lightIntensity = 10
-                            , _lightColor = 1
-                            }
-
-        softLight       = Light
-                            { _lightType  = Pointlight { _pLightPosition = V3 15 10 0
-                                                       , _pLightRadius = 15
-                                                       }
-                            , _lightIntensity = 10
-                            , _lightColor = 1
-                            }
+        mainLight       = makeDirectionalLight (V3 (-1) (-1) 0) (V3 1 0.953 0.918) 1
 
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
@@ -220,10 +198,10 @@ simToRender SphereView{..} =
     in theScene
         `addSpheres` (7, 7, V2 10 10, sphereEntity)
         `addEntity` groundEntity
+        `addLight` mainLight
         `addLight` spotLight01
         `addLight` spotLight02
         `addLight` spotLight03
-        -- `addLight` mainLight
         -- `addLight` secondLight
         -- `addLight` softLight
 
