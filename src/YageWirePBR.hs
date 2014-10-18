@@ -138,10 +138,12 @@ simToRender SphereView{..} =
                               & normalMaterial.Mat.matTransformation.transScale *~ 2.0
 
         -- lighting
+        mainLight       = makeDirectionalLight (V3 (-1) (-1) 0) (V3 1 0.953 0.918) 0.2
+
         spotLight01       = makeSpotlight ( V3 8 8 0 )
                                           ( V3 (-5) (-5) 0 )
                                           50 60
-                                          ( V3 1 0 0 ) 1
+                                          ( V3 1 0 0 ) 2
 
         spotLight02       = makeSpotlight ( V3 (-8) 8 0 )
                                           ( V3 5 (-5) 0 )
@@ -153,7 +155,6 @@ simToRender SphereView{..} =
                                           50 60
                                           ( V3 0.1 0.1 1 ) 1
 
-        mainLight       = makeDirectionalLight (V3 (-1) (-1) 0) (V3 1 0.953 0.918) 1
 
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
         --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
