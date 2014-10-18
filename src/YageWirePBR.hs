@@ -156,14 +156,9 @@ simToRender SphereView{..} =
                                           ( V3 0.1 0.1 1 ) 1
 
 
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
         envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
         ext             = "jpg"
         cubeMapFile file= envPath </> file <.> ext
-
-        --skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-        --skyCubeMap      = Res.TextureFile <$> pure (cubeMapFile "posx")
 
         skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
                             { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
@@ -203,8 +198,6 @@ simToRender SphereView{..} =
         `addLight` spotLight01
         `addLight` spotLight02
         `addLight` spotLight03
-        -- `addLight` secondLight
-        -- `addLight` softLight
 
 
 addSpheres :: PBRScene -> (Int, Int, V2 Double, SceneEntity) -> PBRScene
