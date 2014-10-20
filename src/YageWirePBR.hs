@@ -66,8 +66,8 @@ pbrTestScene = proc () -> do
 
     returnA -< emptyScene (hdrCamera camera) emptyGUI
                     & sceneSky          ?~ sky camera
-                    & sceneEntities     .~ [ groundEntity ] ++ spheres
-                    & sceneLights       .~ [ mainLight, spotLight01, spotLight02, spotLight03 ]
+                    & sceneEntities     .~ fromList ( [groundEntity] ++ spheres )
+                    & sceneLights       .~ fromList [ mainLight, spotLight01, spotLight02, spotLight03 ]
 
     where
 
