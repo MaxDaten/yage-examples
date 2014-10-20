@@ -60,23 +60,34 @@ type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0) idTransformation
 
-    camera       <- cameraControl           -< initCamera
+    hdrCam <- hdrCamera -< ()
 
-    returnA -< emptyScene (hdrCamera camera) emptyGUI
-                    & sceneSky          ?~ sky camera
+    returnA -< emptyScene hdrCam emptyGUI
+                    & sceneSky          ?~ sky (hdrCam^.hdrCameraHandle.cameraLocation)
                     & sceneEntities     .~ fromList ( [groundEntity] ++ spheres )
                     & sceneLights       .~ fromList [ mainLight, spotLight01, spotLight02, spotLight03 ]
 
     where
 
-    hdrCamera cam =
-        defaultHDRCamera cam
-            & hdrExposure           .~ 2
-            & hdrExposureBias       .~ 0.0
-            & hdrWhitePoint         .~ 11.2
-            & hdrBloomSettings      .~ bloomSettings
+    hdrCamera =
+        let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0) idTransformation
+        in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
+
+    hdrController =
+         hdrExposure      <~~ stepValue 2.0 ( (Key'Period, 0.05), (Key'Comma, 0.05) ) >>>
+         hdrExposureBias  <~~ stepValue 0.0 ( (Key'M     , 0.01), (Key'N    , 0.01) ) >>>
+         hdrWhitePoint    <~~ pure 11.2       >>>
+         hdrBloomSettings <~~ pure bloomSettings
+
+        where
+
+        stepValue initV ((upKey, upStep), (downKey, downStep)) = proc _ -> do
+            addVal <- hold . sumE . keyJustPressed upKey    <|> 0 -< upStep
+            subVal <- hold . sumE . keyJustPressed downKey  <|> 0 -< downStep
+            -- exposureValue <- integral 2.0 . derivative -< addVal - subVal
+            returnA -< initV + addVal - subVal
+
 
     bloomSettings =
         defaultBloomSettings
@@ -86,7 +97,7 @@ pbrTestScene = proc () -> do
             & bloomWidth            .~ 2
             & bloomThreshold        .~ 0.5
 
-    sky cam =
+    sky center =
         let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
             ext             = "jpg"
             cubeMapFile file= envPath </> file <.> ext
@@ -97,7 +108,7 @@ pbrTestScene = proc () -> do
                                 , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
                                 }
         in skydome skyCubeMap
-            & entityPosition        .~ cam^.cameraLocation
+            & entityPosition        .~ center
             & entityScale           .~ 100
             & materials
                 .Mat.matConfig
