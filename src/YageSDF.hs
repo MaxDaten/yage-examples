@@ -74,7 +74,7 @@ sdfRenderSystem viewport theView = do
     Pass.screenPass viewport [ theView^.background, guiTex ]
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => Texture -> Texture -> YageWire t () SDFView
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => Texture -> Texture -> YageWire t () SDFView
 mainWire bitmap sdf =
     let bgrColor = Mat.TexRGB8 `Mat.pxTexture` Mat.thistle
         bgr      = Texture "Background" def $ Mat.Texture2D bgrColor
