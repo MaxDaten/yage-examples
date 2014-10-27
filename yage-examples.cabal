@@ -209,3 +209,27 @@ executable yage-sdf
                         , netwire         == 5.0.0
 
 -------------------------------------------------------------------------------
+
+executable yage-font-sdf
+    hs-source-dirs:       src/
+    main-is:              YageFontSDF.hs
+
+    other-modules:        Yage.Examples.Shared
+
+    ghc-options:          -j8 -threaded -rtsopts -with-rtsopts=-N
+    ghc-prof-options:     -w -prof
+
+
+    default-extensions:   NoImplicitPrelude
+                          Arrows
+                          OverloadedStrings
+    default-language:     Haskell2010
+
+    build-depends:        base            <  5
+                        , yage            == 0.3.0.0
+                        , yage-contrib    == 0.0.1.0
+                        , yage-core       == 0.0.2.0
+                        , yage-rendering  == 0.0.5.0
+                        , yage-geometry   == 0.0.0.3
+
+                        , netwire         == 5.0.0

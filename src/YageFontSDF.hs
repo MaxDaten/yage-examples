@@ -103,13 +103,10 @@ mainWire fontTex =
         returnA -< SDFView
             { _background = bgr
             , _gui        = emptyGUI & guiElements.at "Hallo"       ?~ GUIFont txtBuffer (idTransformation & transPosition._xy .~ V2 50 180
-                                                                                                           & transScale._xy .~ scale *^ 4.5)
+                                                                                                           & transScale._xy .~ scale *^ 2)
                                      -- & guiElements.at "FontTexture" ?~ guiImage tex txtColor (V2 0 0) (V2 800 800)
             }
 
 
 instance LinearInterpolatable SDFView where
     lerp alpha u v = u & gui .~ lerp alpha (u^.gui) (v^.gui)
-
-instance HasResources GeoVertex SDFView SDFView where
-    requestResources = return
