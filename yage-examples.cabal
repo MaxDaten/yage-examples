@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                yage-examples
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            some examples for the yage lib with netwires or without
 -- description:         
 license:             MIT
