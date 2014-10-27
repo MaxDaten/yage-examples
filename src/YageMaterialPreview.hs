@@ -132,40 +132,43 @@ mainWire = proc () -> do
 
     skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
 
-    fontRes = fontResource $ "res" </> "font" </> "yft" </> "SourceCodePro-Regular1024.yft"
-    imgRes  = textureResource $ "res"</>"Brown_Leather_Texture.png"
+    fontRes = fontResource $ "res"</>"font"</>"yft"</>"SourceCodePro-Regular1024.yft"
+    imgRes  = textureResource $ "res"</>"tex"</>"misc"</>"Linear-ZonePlate.png"
 
-    guiWire :: Real t => YageWire t (FilePath, FilePath, FilePath) GUI
+    guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t (FilePath, FilePath, FilePath) GUI
     guiWire = proc (meshFile, albedoFile, normalFile) -> do
         fontTex <- constFontW fontRes -< ()
         imgTex  <- constTextureW imgRes -< ()
         t       <- time -< ()
+        fps     <- avgFps 60 -< ()
 
-        let infoTxt  = format "mesh: {}\nalbedo: {}\nnormal: {}"
-                        ( Shown meshFile, Shown albedoFile, Shown normalFile )
 
-            fileText = emptyTextBuffer fontTex
+        let fileText = emptyTextBuffer fontTex
                         & charColor  .~ V4 0 0 0 1
-                        & buffText   .~ infoTxt
+                        & buffText   .~ format "mesh: {}\nalbedo: {}\nnormal: {}"
+                                        ( Shown meshFile, Shown albedoFile, Shown normalFile )
 
             fileTrans :: Transformation Double
-            fileTrans  = idTransformation & transPosition  .~ V3 (100) (10) (0)
-                                          & transScale._xy *~ 10.5
-
-            timeTxt  = format "t: {}"
-                        ( Only $ fixed 2 t )
+            fileTrans  = idTransformation & transPosition  .~ V3 (15) (750) (1.0)
+                                          & transScale._xy .~ 1.1
 
             timeText = emptyTextBuffer fontTex
                         & charColor  .~ V4 0 0 0 1
-                        & buffText  .~ timeTxt
-            imgCol   = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
+                        & buffText  .~ format "t: {}" ( Only $ fixed 2 t )
 
-            timeTrans  = idTransformation & transPosition  .~ V3 (400) (400) (0)
-                                          & transScale._xy *~ 10.0
+            timeTrans  = idTransformation & transPosition  .~ V3 (15) (50) (-1.0)
+                                          & transScale._xy .~ 1.1
+            fpsText  = emptyTextBuffer fontTex
+                        & charColor  .~ V4 0 0 0 1
+                        & buffText  .~ format "fps: {}" ( Only $ fixed 2 (fps :: Double) )
 
-        returnA -< emptyGUI & guiElements.at "Image"    ?~ guiImage imgTex imgCol (V2 (400) (100)) (V2 200 200)
-                            & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
+            fpsTrans  = idTransformation & transPosition  .~ V3 (1030) (50) (-1.0)
+                                         & transScale._xy .~ 1.1
+
+        returnA -< emptyGUI & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
                             & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
+                            & guiElements.at "FPS"      ?~ GUIFont fpsText fpsTrans
+                            -- & guiElements.at "Image"    ?~ guiImage imgTex 1 (V2 (10) (10)) (V2 300 780)
 
 
 
