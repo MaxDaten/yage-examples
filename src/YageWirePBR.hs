@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -19,7 +20,11 @@ import Yage.Camera
 import Yage.HDR
 import Yage.Scene
 import Yage.Transformation
+import Yage.Resources
+
 import Yage.Pipeline.Deferred
+import Yage.Pipeline.Deferred.GeometryPass
+
 import Yage.Examples.Shared
 import qualified Yage.Core.OpenGL as GL
 
@@ -29,6 +34,7 @@ import Yage.UI.GUI
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
 
+import Data.Traversable (sequenceA)
 
 
 winSettings :: WindowConfig
@@ -53,8 +59,8 @@ main = yageMain "yage-pbr" defaultAppConfig winSettings pbrTestScene yDeferredLi
 -------------------------------------------------------------------------------
 -- View Definition
 
-type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment Light SkyEntityRes
+type SceneEntity      = GeoEntity
+type SceneEnvironment = Environment Light SkyEntity
 type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 
@@ -62,16 +68,30 @@ pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t (
 pbrTestScene = proc () -> do
 
     hdrCam <- hdrCamera -< ()
+    sky    <- skyDomeW  -< hdrCam^.hdrCameraHandle.cameraLocation
+
+    spheres <- spheresW -< ()
+    ground  <- overA materials groundMaterialW -< groundEntity
 
     returnA -< emptyScene hdrCam emptyGUI
-                    & sceneSky          ?~ sky (hdrCam^.hdrCameraHandle.cameraLocation)
-                    & sceneEntities     .~ fromList ( [groundEntity] ++ spheres )
+                    & sceneSky          ?~ sky
+                    & sceneEntities     .~ fromList ( ground:spheres )
                     & sceneLights       .~ fromList [ mainLight, spotLight01, spotLight02, spotLight03 ]
 
     where
+    texDir  = "res"</>"tex"
+
+    sphereMesh = meshResource $ loadYGM geoVertex ("res" </> "model" </> "sphere.ygm", mempty)
+
+    spheresW   = proc _ -> do
+        sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
+        returnA -< generateOnGrid . (7, 7, V2 10 10,) $
+                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.dimgray
+                           & entityScale //~ 2
+
 
     hdrCamera =
-        let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0) idTransformation
+        let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0)
         in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
     hdrController =
@@ -97,41 +117,46 @@ pbrTestScene = proc () -> do
             & bloomWidth            .~ 2
             & bloomThreshold        .~ 0.5
 
-    sky center =
+
+    skyDomeW :: YageWire t (V3 Double) SkyEntity
+    skyDomeW = proc pos -> do
+        tex <- cubeTexture <$> sequenceA (constTextureW <$> skyTex) -< ()
+        returnA -< skydome & materials.Mat.matTexture .~ tex
+                           & materials.Mat.matTexture
+                                .textureConfig
+                                .texConfWrapping
+                                .texWrapClamping      .~ GL.ClampToEdge
+                           & entityPosition           .~ pos
+                           & entityScale              .~ 50
+
+    skyTex  =
         let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
             ext             = "jpg"
-            cubeMapFile file= envPath </> file <.> ext
-
-            skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
-                                { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
-                                , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
-                                , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
-                                }
-        in skydome skyCubeMap
-            & entityPosition        .~ center
-            & entityScale           .~ 100
-            & materials
-                .Mat.matConfig
-                .texConfWrapping
-                .texWrapClamping        .~ GL.ClampToEdge
-            & materials.Mat.matColor    .~ Mat.opaque (Mat.rgb 2.0 2.0 2.0)
+            fileRes file    = textureResource $ envPath </> file <.> ext
+        in Mat.Cube
+            { cubeFaceRight = fileRes "posx", cubeFaceLeft   = fileRes "negx"
+            , cubeFaceTop   = fileRes "posy", cubeFaceBottom = fileRes "negy"
+            , cubeFaceFront = fileRes "posz", cubeFaceBack   = fileRes "negz"
+            }
+        -- textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
 
     -- The Ground
     groundEntity :: SceneEntity
     groundEntity =
         ( floorEntity :: SceneEntity )
-            & materials         .~ groundMaterial
+            -- & materials         .~ groundMaterial
             & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
             & entityPosition    .~ V3 0 (-0.75) 0
             & entityScale       .~ V3 13 1 13
 
-    groundMaterial =
-        def & albedoMaterial.Mat.singleMaterial                 .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
-            & albedoMaterial.Mat.matTransformation.transScale   *~ 4.0
-            & normalMaterial.Mat.singleMaterial                 .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
-            & normalMaterial.Mat.matTransformation.transScale   *~ 2.0
-            & roughnessMaterial.Mat.singleMaterial              .~ TextureFile ( "res" </> "tex" </> "floor_r.png" )
-            & normalMaterial.Mat.matTransformation.transScale   *~ 2.0
+    groundMaterialW :: YageWire t GeoMaterial GeoMaterial
+    groundMaterialW =
+          ( albedoMaterial.Mat.matTexture    <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_d.png" )
+        >>> normalMaterial.Mat.matTexture    <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_n.png" )
+        >>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_r.png" ))
+        <&> albedoMaterial.Mat.stpFactor   *~ 4.0
+        <&> normalMaterial.Mat.stpFactor   *~ 2.0
+        <&> normalMaterial.Mat.stpFactor   *~ 2.0
 
     -- lighting
     mainLight   = makeDirectionalLight (V3 (-1) (-1) 0) (V3 1 0.953 0.918) 0.2
@@ -150,20 +175,6 @@ pbrTestScene = proc () -> do
                                 ( V3 0 (-5) (-5) )
                                 50 60
                                 ( V3 0.1 0.1 1 ) 1
-
-
-    spheres :: [SceneEntity]
-    spheres =
-        let sphereEntity    = ( basicEntity :: SceneEntity )
-                                & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
-                                & entityOrientation .~ 1
-                                & entityScale       .~ 0.5
-                                & materials         .~ sphereMaterial
-            sphereMaterial  = defaultGeoMaterial
-                                & albedoMaterial.Mat.matColor .~ Mat.opaque Mat.dimgray
-        in generateOnGrid (7, 7, V2 10 10, sphereEntity)
-
-
 
 generateOnGrid :: (Int, Int, V2 Double, SceneEntity) -> [SceneEntity]
 generateOnGrid (xCnt, yCnt, V2 dimX dimY, template) =

@@ -64,7 +64,97 @@ makeLenses ''Head
 
 
 main :: IO ()
-main = yageMain "yage-head" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-head" defaultAppConfig winSettings mainWire yDeferredLighting (1/60)
+
+-------------------------------------------------------------------------------
+-- View Definition
+type SceneEntity      = GeoEntity
+type SceneEnvironment = Environment Light SkyEntity
+type HeadScene        = Scene HDRCamera SceneEntity SceneEnvironment GUI
+
+
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () HeadScene
+mainWire = proc () -> do
+
+    cam    <- overA hdrCameraHandle cameraControl -< camera
+    sky    <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
+
+    headEntity <- headEntityW >>> (entityOrientation <~~ headRotationByInput) -< ()
+
+    redLight  <- pLightRedW  -< ()
+    blueLight <- pLightBlueW -< ()
+
+    returnA -< emptyScene cam emptyGUI
+                & sceneSky      ?~ sky
+                & sceneEntities .~ fromList [ headEntity ]
+                & sceneLights   .~ fromList [ frontPLight, backPLight, redLight, blueLight ]
+
+    where
+    texDir      = "res" </> "tex"
+
+    skyTex :: YageResource Texture
+    skyTex = pure $ mkTexture "SKYE" $ Texture2D $ Mat.pxTexture Mat.TexSRGB8 Mat.black
+
+    skyDomeW :: YageWire t (V3 Double) SkyEntity
+    skyDomeW = proc pos -> do
+        tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
+        returnA -< skydome & materials.Mat.matTexture .~ tex
+                           & entityPosition           .~ pos
+                           & entityScale              .~ 50
+
+    frontPLight     = Light
+                        { _lightType        = Pointlight (V3 0 0.5 5) 20
+                        , _lightColor       = V3 1 1 1
+                        , _lightIntensity   = 1
+                        }
+    backPLight      = Light
+                        { _lightType        = Pointlight (negate (V3 1 1 3)) 30
+                        , _lightColor       = V3 0.8 0.8 1
+                        , _lightIntensity   = 1
+                        }
+    pLightRedW =
+        Light <$> (Pointlight <$> arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time
+                              <*> pure 1)
+              <*> (pure $ V3 1.0 0.0 0.0)
+              <*> (pure 0.1)
+
+    pLightBlueW =
+        Light <$> (Pointlight <$> arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time
+                              <*> pure 1)
+              <*> (pure $ V3 0.85 0.85 1.0)
+              <*> (pure 0.1)
+
+    headEntityW :: YageWire t b GeoEntity
+    headEntityW =
+        let albedoTex = textureResource $ texDir</>"head"</>"small"</>"head_albedo.jpg"
+            normalTex = textureResource $ texDir</>"head"</>"small"</>"head_tangent.jpg"
+        in (pure (basicEntity :: GeoEntity)
+                >>> renderData <~~ constMeshW headMesh
+                >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
+                >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW normalTex)
+                <&> materials.albedoMaterial.Mat.stpFactor %~ negate
+                <&> materials.normalMaterial.Mat.stpFactor %~ negate
+                <&> entityScale         .~ 4
+                <&> entityPosition      .~ V3 0 0.5 0
+
+    headMesh :: YageResource (Mesh GeoVertex)
+    headMesh = meshResource $ loadYGM geoVertex ( "res" </> "model" </> "head.ygm", mkSelection [] )
+
+    bloomSettings   = defaultBloomSettings
+                        & bloomFactor           .~ 1
+                        & bloomPreDownsampling  .~ 2
+                        & bloomGaussPasses      .~ 7
+                        & bloomWidth            .~ 2
+                        & bloomThreshold        .~ 0.6
+
+    camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,1000.0) )
+                        & hdrExposure           .~ 0.5
+                        & hdrExposureBias       .~ 0.0
+                        & hdrWhitePoint         .~ 11.2
+                        & hdrBloomSettings      .~ bloomSettings
+
+
+
 
 camStartPos :: V3 Double
 camStartPos = V3 0 0.1 1
@@ -81,22 +171,6 @@ mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mous
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
 
-
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () HeadView
-mainWire = proc () -> do
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
-
-    headRot   <- headRotationByInput   -< ()
-    camera    <- cameraControl -< initCamera
-    lightPosRed  <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
-    lightPosBlue <- arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time -< ()
-
-    returnA -< HeadView camera
-                    (Head 1 headRot 1)
-                    (lightPosRed)
-                    (lightPosBlue)
-
-
 headRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
 headRotationByInput =
     let acc         = 20
@@ -107,87 +181,4 @@ headRotationByInput =
   . smoothRotationByKey acc att ( xAxis ) Key'Up
   . smoothRotationByKey acc att (-xAxis ) Key'Down
   . 1
-
-
-
-
--------------------------------------------------------------------------------
--- View Definition
-type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment Light SkyEntityRes
-
-simToRender :: HeadView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
-simToRender HeadView{..} =
-        let
-            texDir      = "res" </> "tex"
-            objE        = (basicEntity :: GeoEntityRes)
-                            & renderData         .~ Res.MeshFile ( "res" </> "model" </> "head.ygm", mkSelection [] ) Res.YGMFile
-                            -- & renderData         .~ Res.MeshFile ( "/Users/jloos/Workspace/hs/yage-meta/yage-research/Infinite_Scan_Ver0.1/Infinite-Level_02.OBJ", [] ) Res.OBJFile
-                            & entityPosition     .~ V3 0 0.5 0
-                            & entityScale        .~ 4
-                            & entityOrientation  .~ (realToFrac <$> _theHead^.headOrientation)
-                            & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_albedo.jpg" )
-                            & materials.albedoMaterial.Mat.stpFactor._t    %~ negate
-
-                            & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir </> "head" </> "small" </> "head_tangent.jpg" )
-                            & materials.normalMaterial.Mat.stpFactor._t    %~ negate
-
-            blackTexture    = mkTexture "SKYE" $ Texture2D $ Mat.pxTexture Mat.TexSRGB8 Mat.black
-            skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ pure $ Res.TexturePure blackTexture
-
-            sky             = skydome skyCubeMap
-                            & entityPosition        .~ _viewCamera^.cameraLocation
-                            & entityScale           .~ 100
-                            & materials
-                                .Mat.matConfig
-                                .texConfWrapping
-                                .texWrapClamping        .~ GL.ClampToEdge
-
-            frontPLight     = Light
-                                { _lightType      = Pointlight (V3 0 0.5 2.5) 10
-                                , _lightColor     = V3 1 1 1
-                                , _lightIntensity = 1
-                                }
-
-            backPLight      = Light
-                                { _lightType  = Pointlight (negate (V3 1 1 3)) 30
-                                , _lightColor = V3 0.8 0.8 1
-                                , _lightIntensity = 1
-                                }
-
-            movingPLightRed = Light
-                                { _lightType  = Pointlight _lightPosRed 1
-                                , _lightColor = V3 1.0 0.0 0.0
-                                , _lightIntensity = 1
-                                }
-
-            movingPLightBlue= Light
-                                { _lightType  = Pointlight _lightPosBlue 1
-                                , _lightColor = V3 1.0 1.0 1.0
-                                , _lightIntensity = 1
-                                }
-
-            bloomSettings   = defaultBloomSettings
-                                & bloomFactor           .~ 1
-                                & bloomPreDownsampling  .~ 2
-                                & bloomGaussPasses      .~ 7
-                                & bloomWidth            .~ 2
-                                & bloomThreshold        .~ 0.6
-
-            camera          = defaultHDRCamera _viewCamera
-                                & hdrExposure           .~ 1
-                                & hdrExposureBias       .~ 0.0
-                                & hdrWhitePoint         .~ 11.2
-                                & hdrBloomSettings      .~ bloomSettings
-
-            theScene        = emptyScene camera emptyGUI
-                                & sceneSky ?~ sky
-                                & sceneEnvironment.envAmbient .~ AmbientLight 0
-        in theScene
-            `addEntity` objE
-
-            `addLight` frontPLight
-            `addLight` backPLight
-            `addLight` movingPLightRed
-            `addLight` movingPLightBlue
 
