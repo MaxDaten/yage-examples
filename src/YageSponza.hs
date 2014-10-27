@@ -7,6 +7,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ParallelListComp #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -43,27 +44,76 @@ winSettings = WindowConfig
 appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
-type Cube = Transformation Double
-data CubeView = CubeView
-    { _viewCamera     :: Camera
-    , _theCube        :: !Cube
-    , _lightPosRed    :: !(V3 Double)
-    , _lightPosBlue   :: !(V3 Double)
-    }
-    deriving (Show)
-
-makeLenses ''CubeView
-
 main :: IO ()
-main = yageMain "yage-sponza" appConf winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
+main = yageMain "yage-sponza" appConf winSettings mainWire yDeferredLighting (1/60)
 
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeView
-mainWire =
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,100000) idTransformation
-    in CubeView <$> cameraControl . pure initCamera
-                <*> cubeControl . pure idTransformation
-                <*> arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time
-                <*> arr (\t-> V3 0 0 (-0.5) + V3 (cos t * 0.5) (sin t) (sin t * 0.5)) . time
+
+-------------------------------------------------------------------------------
+-- View Definition
+
+
+type SceneEntity      = GeoEntity
+type SceneEnvironment = Environment Light SkyEntity
+type SponzaScene      = Scene HDRCamera SceneEntity SceneEnvironment GUI
+
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () SponzaScene
+mainWire = proc () -> do
+    world <- worldEntityW -< ()
+    cam   <- hdrCameraHandle `overA` cameraControl -< camera
+    sky   <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
+    returnA -< emptyScene cam emptyGUI
+                    & sceneLights   .~ fromList (genLights baseLight)
+                    & sceneEntities .~ fromList [ world ]
+                    & sceneSky ?~ sky
+    where
+    texDir      = "res" </> "tex"
+
+    sponzaModel = meshResource $ loadYGM geoVertex $ ( "res" </> "model" </> "env" </> "sponza.ygm", mkSelection [] )
+
+    worldEntityW= proc () -> do
+        entity <- renderData <~~ constMeshW sponzaModel
+            >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW (textureResource $ texDir</>"default"<.>"png")
+            >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW (textureResource $ texDir</>"floor_n"<.>"png") -< basicEntity :: SceneEntity
+
+        returnA -< entity & materials.albedoMaterial.Mat.stpFactor .~ 2.0
+                          & materials.normalMaterial.Mat.stpFactor .~ 2.0
+                          & entityScale //~ 200
+
+    baseLight p = Light
+                    { _lightType      = Pointlight p 10
+                    , _lightColor     = V3 1.0 1.0 1.0
+                    , _lightIntensity = 0.1
+                    }
+
+
+    skyDomeW :: YageWire t (V3 Double) SkyEntity
+    skyDomeW = proc pos -> do
+        tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
+        returnA -< skydome & materials.Mat.matTexture .~ tex
+                           & entityPosition           .~ pos
+                           & entityScale              .~ 50
+
+    skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+
+    camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,10000) )
+                        & hdrExposure           .~ 2
+                        & hdrExposureBias       .~ 0.0
+                        & hdrWhitePoint         .~ 11.2
+                        & hdrBloomSettings      .~ bloomSettings
+
+    bloomSettings   = defaultBloomSettings
+                        & bloomFactor           .~ 0.7
+                        & bloomPreDownsampling  .~ 2
+                        & bloomGaussPasses      .~ 5
+                        & bloomWidth            .~ 2
+                        & bloomThreshold        .~ 0.5
+
+
+    genLights mkLight = map mkLight [ V3 (5 * x - 2.5) (5 * y) (5 * z - 2.5)
+                                    | x <- [0..2]
+                                    , y <- [0..2]
+                                    , z <- [0..2]
+                                    ]
 
 
 camStartPos :: V3 Double
@@ -81,74 +131,3 @@ mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mous
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
 
-cubeControl :: Real t => YageWire t Cube Cube
-cubeControl = overA transOrientation cubeRotationByInput
-
-cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
-cubeRotationByInput =
-    let acc         = 20
-        att         = 0.87
-    in
-   smoothRotationByKey acc att ( yAxis ) Key'Right
- . smoothRotationByKey acc att (-yAxis ) Key'Left
- . smoothRotationByKey acc att ( xAxis ) Key'Up
- . smoothRotationByKey acc att (-xAxis ) Key'Down
- . 1
-
-
-
--------------------------------------------------------------------------------
--- View Definition
-
-
-type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment Light SkyEntityRes
-
-simToRender :: CubeView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
-simToRender CubeView{..} =
-    let texDir      = "res" </> "tex"
-        ext         = "png"
-        boxE        = ( boxEntity :: GeoEntityRes )
-                        & renderData              .~ Res.MeshFile ( "res" </> "model" </> "env" </> "sponza.ygm", mkSelection [] ) Res.YGMFile
-                        & entityTransformation    .~ _theCube
-                        & entityScale             //~ 100
-                        & materials.albedoMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"default"<.>"png")
-                        & materials.albedoMaterial.Mat.stpFactor .~ 2.0
-                        & materials.normalMaterial.Mat.singleMaterial .~ ( Res.TextureFile $ texDir</>"floor_n"<.>"png")
-                        & materials.normalMaterial.Mat.stpFactor .~ 2.0
-        baseLight p = Light
-                        { _lightType      = Pointlight p 10
-                        , _lightColor     = V3 1.0 1.0 1.0
-                        , _lightIntensity = 0.1
-                        }
-
-
-        skyCubeMap      = Res.TextureFile <$> pure (texDir </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-        sky             = ( skydome $ Mat.mkMaterialF ( Mat.opaque Mat.white ) skyCubeMap )
-                            & entityTransformation.transPosition .~ _viewCamera^.cameraLocation
-                            & entityScale .~ 1000
-
-        bloomSettings   = defaultBloomSettings
-                            & bloomFactor           .~ 0.7
-                            & bloomPreDownsampling  .~ 2
-                            & bloomGaussPasses      .~ 5
-                            & bloomWidth            .~ 2
-                            & bloomThreshold        .~ 0.5
-
-        camera          = defaultHDRCamera _viewCamera
-                            & hdrExposure           .~ 2
-                            & hdrExposureBias       .~ 0.0
-                            & hdrWhitePoint         .~ 11.2
-                            & hdrBloomSettings      .~ bloomSettings
-
-        theScene        = emptyScene camera emptyGUI
-                            & sceneSky ?~ sky
-                            & sceneEnvironment.envAmbient .~ AmbientLight 0
-    in (foldl' addLight theScene (genLights baseLight))
-        `addEntity` boxE
-    where
-    genLights mkLight = map mkLight [ V3 (5 * x - 2.5) (5 * y) (5 * z - 2.5)
-                                    | x <- [0..2]
-                                    , y <- [0..2]
-                                    , z <- [0..2]
-                                    ]
