@@ -149,7 +149,7 @@ mainWire = proc () -> do
                         & buffText   .~ infoTxt
 
             fileTrans :: Transformation Double
-            fileTrans  = idTransformation & transPosition  .~ V3 (-100) (10) (0)
+            fileTrans  = idTransformation & transPosition  .~ V3 (100) (10) (0)
                                           & transScale._xy *~ 10.5
 
             timeTxt  = format "t: {}"
@@ -160,12 +160,12 @@ mainWire = proc () -> do
                         & buffText  .~ timeTxt
             imgCol   = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
 
-            -- timeTrans  = idTransformation & transPosition  .~ V3 (-1000) (20) (0)
-            --                               & transScale._xy *~ 10.0
+            timeTrans  = idTransformation & transPosition  .~ V3 (400) (400) (0)
+                                          & transScale._xy *~ 10.0
 
         returnA -< emptyGUI & guiElements.at "Image"    ?~ guiImage imgTex imgCol (V2 (400) (100)) (V2 200 200)
-                            -- & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
-                            -- & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
+                            & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
+                            & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
 
 
 
