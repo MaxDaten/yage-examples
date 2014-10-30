@@ -87,7 +87,7 @@ sdfRenderSystem viewport theView = do
 mainWire :: (HasTime Float (YageTimedInputState t), Real t) => FontTexture -> YageWire t () SDFView
 mainWire fontTex =
     let bgrColor  = Mat.TexRGB8 `Mat.pxTexture` Mat.sRGB24 66 85 114
-        bgr       = Texture "Background" def $ Mat.Texture2D bgrColor
+        bgr       = mkTexture2D "Background" bgrColor
 
         txtColor  = Mat.sRGBV4 $ Mat.opaque $ Mat.sRGB24 253 96 65
         txtBuffer = emptyTextBuffer fontTex
@@ -95,7 +95,7 @@ mainWire fontTex =
                         & buffText  .~ "A monad is just a monoid \nin the category of endofunctors"
 
         imgTex   = Mat.mkTextureImg Mat.TexY8 $ fontTex^.fontMap
-        tex      = mkTexture ( fontTex^.fontMetric.fontName.packedChars ) $ Texture2D imgTex
+        tex      = mkTexture2D ( fontTex^.fontMetric.fontName.packedChars ) imgTex
 
 
     in proc _ -> do

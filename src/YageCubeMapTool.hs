@@ -18,6 +18,7 @@ import Yage.Wire hiding ((<>), at)
 import Yage.Camera
 import Yage.Scene
 import Yage.HDR
+import Yage.Texture
 import Yage.Texture.TextureAtlas
 import Yage.Formats.Font
 

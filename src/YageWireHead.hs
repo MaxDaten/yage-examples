@@ -19,6 +19,7 @@ import Yage.Wire hiding ((<>))
 import           Yage.Camera
 import           Yage.Scene
 import           Yage.HDR
+import           Yage.Texture
 import           Yage.UI.GUI
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
@@ -93,7 +94,7 @@ mainWire = proc () -> do
     texDir      = "res" </> "tex"
 
     skyTex :: YageResource Texture
-    skyTex = pure $ mkTexture "SKYE" $ Texture2D $ Mat.pxTexture Mat.TexSRGB8 Mat.black
+    skyTex = pure $ mkTexture2D "SKYE" $ Mat.pxTexture Mat.TexSRGB8 Mat.black
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do

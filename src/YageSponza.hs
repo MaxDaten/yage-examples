@@ -20,6 +20,7 @@ import Yage.Camera
 import Yage.Scene
 import Yage.HDR
 import Yage.UI.GUI
+import Yage.Texture
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat

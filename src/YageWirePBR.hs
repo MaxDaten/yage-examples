@@ -19,6 +19,7 @@ import Yage.Wire hiding ((<>))
 import Yage.Camera
 import Yage.HDR
 import Yage.Scene
+import Yage.Texture
 import Yage.Transformation
 import Yage.Resources
 
