@@ -1,34 +1,42 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Arrows                #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE QuasiQuotes           #-}
 
 module Main where
 
-import Yage
-import Yage.Lens hiding ((<.>))
-import Yage.Math
-import Yage.Wire hiding ((<>), at)
+import           Yage
+import           Yage.Lens                 hiding ( (<.>) )
+import           Yage.Math
+import           Yage.Wire                 hiding ( at, (<>), (<+>) )
 
-import Yage.Camera
-import Yage.Scene
-import Yage.HDR
-import Yage.Texture
-import Yage.Texture.TextureAtlas
-import Yage.Formats.Font
+import           Yage.Camera
+import           Yage.Formats.Font
+import           Yage.HDR
+import           Yage.Scene
+import           Yage.Texture
+import           Yage.Viewport
+import           Yage.Uniforms             as Uniforms
+import           Yage.Texture.TextureAtlas
 
-import Yage.UI.GUI
+import           Yage.UI.GUI
+import           Yage.TH.Shader as GLSL
 
-import Yage.Transformation
-import qualified Yage.Resources as Res
-import qualified Yage.Material  as Mat
-import Yage.Pipeline.Deferred
-import Yage.Examples.Shared
+
+import           Yage.Examples.Shared
+import qualified Yage.Material             as Mat
+import           Yage.Pipeline.Deferred    hiding ( toRenderEntity )
+import qualified Yage.Resources            as Res
+import           Yage.Transformation
+import qualified Yage.Core.OpenGL          as GL
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
@@ -50,25 +58,24 @@ appConf = defaultAppConfig{ logPriority = WARNING }
 
 
 main :: IO ()
-main = yageMain "yage-material" appConf winSettings mainWire yDeferredLighting (1/60)
-
+main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
 
 -------------------------------------------------------------------------------
 -- View Definition
 
 
-type SceneEntity      = GeoEntity
+type SceneEntity      = Entity (Mesh GeoVertex) ()
 type SceneEnvironment = Environment Light SkyEntity
-type CubeMapScene    = Scene HDRCamera SceneEntity SceneEnvironment GUI
+type CubeMapScene     = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeMapScene
 mainWire = proc () -> do
-    cam <- hdrCameraHandle `overA` cameraControl -< camera & hdrCameraHandle.cameraOrientation .~ axisAngle (V3 1 0 0) (deg2rad $ -15)
+    cam <- hdrCameraHandle `overA` cameraControl -< camera
     sky <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
 
-    gui <- guiWire -< (meshFile, albedoFile, normalFile)
+    gui <- guiWire -< ()
 
-    dummy <- (entityOrientation `overA` previewRotationByInput) . dummyEntityW modelRes albeoTex normalTex -< ()
+    dummy <- (entityOrientation `overA` previewRotationByInput) . dummyEntityW modelRes -< ()
 
     returnA -< emptyScene cam gui
                 & sceneSky      ?~ sky
@@ -93,24 +100,12 @@ mainWire = proc () -> do
                         & hdrWhitePoint         .~ 11.2
                         & hdrBloomSettings      .~ bloomSettings
 
-    meshFile = "res"</>"model"</>"meshpreview"<.>"ygm"
-    modelRes = meshResource $ loadYGM geoVertex $ (meshFile, mempty)
+    modelRes = meshResource $ loadYGM geoVertex $ ("res"</>"model"</>"sphere"<.>"ygm", mempty)
 
-    albedoFile = texDir </> "floor_d" <.> "png"
-    normalFile = texDir </> "floor_n" <.> "png"
-    albeoTex, normalTex :: YageResource Texture
-    albeoTex   = textureResource albedoFile
-    normalTex  = textureResource normalFile
-
-    dummyEntityW :: YageResource (Mesh GeoVertex) -> YageResource Texture -> YageResource Texture -> YageWire t () GeoEntity
-    dummyEntityW meshRes albedoRes normalRes = proc () -> do
-        entity <- renderData <~~ constMeshW meshRes
-                  >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoRes
-                  >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW normalRes -< boxEntity :: GeoEntity
-        returnA -< entity & materials.albedoMaterial.Mat.stpFactor *~ 2.0
-                          & materials.normalMaterial.Mat.stpFactor *~ 2.0
-                          & entityPosition          -~ V3 0 1 0
-                          & entityScale             //~ 200
+    dummyEntityW :: YageResource (Mesh GeoVertex) -> YageWire t () SceneEntity
+    dummyEntityW meshRes = proc () -> do
+        entity <- renderData <~~ constMeshW meshRes -< boxEntity :: SceneEntity
+        returnA -< entity & entityScale //~ 2.0
 
     mainLight  = Light
                 { _lightType      = Pointlight (V3 15 1 15) 100
@@ -126,50 +121,23 @@ mainWire = proc () -> do
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
-        returnA -< skydome & materials.Mat.matTexture .~ tex
+        let cubeTex = cubeTextureToTexture "SkyCube" $ mkTexture2D "" <$>
+             Cube  { cubeFaceRight  = Mat.TexRGB8 `Mat.pxTexture` Mat.red
+                   , cubeFaceLeft   = Mat.TexRGB8 `Mat.pxTexture` Mat.green
+                   , cubeFaceTop    = Mat.TexRGB8 `Mat.pxTexture` Mat.blue
+                   , cubeFaceBottom = Mat.TexRGB8 `Mat.pxTexture` Mat.cyan
+                   , cubeFaceFront  = Mat.TexRGB8 `Mat.pxTexture` Mat.magenta
+                   , cubeFaceBack   = Mat.TexRGB8 `Mat.pxTexture` Mat.yellow
+                   }
+        -- tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
+        returnA -< skydome & materials.Mat.matTexture .~ cubeTex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
     skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
 
-    fontRes = fontResource $ "res"</>"font"</>"yft"</>"SourceCodePro-Regular1024.yft"
-    imgRes  = textureResource $ "res"</>"tex"</>"misc"</>"Linear-ZonePlate.png"
-
-    guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t (FilePath, FilePath, FilePath) GUI
-    guiWire = proc (meshFile, albedoFile, normalFile) -> do
-        fontTex <- constFontW fontRes -< ()
-        imgTex  <- constTextureW imgRes -< ()
-        t       <- time -< ()
-        fps     <- avgFps 60 -< ()
-
-
-        let fileText = emptyTextBuffer fontTex
-                        & charColor  .~ V4 0 0 0 1
-                        & buffText   .~ format "mesh: {}\nalbedo: {}\nnormal: {}"
-                                        ( Shown meshFile, Shown albedoFile, Shown normalFile )
-
-            fileTrans :: Transformation Double
-            fileTrans  = idTransformation & transPosition  .~ V3 (15) (750) (1.0)
-                                          & transScale._xy .~ 1.1
-
-            timeText = emptyTextBuffer fontTex
-                        & charColor  .~ V4 0 0 0 1
-                        & buffText  .~ format "t: {}" ( Only $ fixed 2 t )
-
-            timeTrans  = idTransformation & transPosition  .~ V3 (15) (50) (-1.0)
-                                          & transScale._xy .~ 1.1
-            fpsText  = emptyTextBuffer fontTex
-                        & charColor  .~ V4 0 0 0 1
-                        & buffText  .~ format "fps: {}" ( Only $ fixed 2 (fps :: Double) )
-
-            fpsTrans  = idTransformation & transPosition  .~ V3 (1030) (50) (-1.0)
-                                         & transScale._xy .~ 1.1
-
-        returnA -< emptyGUI & guiElements.at "FileInfo" ?~ GUIFont fileText fileTrans
-                            & guiElements.at "Time"     ?~ GUIFont timeText timeTrans
-                            & guiElements.at "FPS"      ?~ GUIFont fpsText fpsTrans
-                            -- & guiElements.at "Image"    ?~ guiImage imgTex 1 (V2 (10) (10)) (V2 300 780)
+    guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () GUI
+    guiWire = pure emptyGUI
 
 
 
@@ -203,3 +171,149 @@ previewRotationByInput =
  . smoothRotationByKey acc att (-yAxis ) Key'Left
  . smoothRotationByKey acc att ( xAxis ) Key'Up
  . smoothRotationByKey acc att (-xAxis ) Key'Down
+
+-------------------------------------------------------------------------------
+-- Render Pass Definition
+
+
+cubemapPipeline :: Viewport Int -> CubeMapScene -> RenderSystem ()
+cubemapPipeline viewport scene =
+    let cam                     = scene^.sceneCamera.hdrCameraHandle
+        baseDescr               = simpleCubeMapped viewport
+        runBasePass             = runRenderPass baseDescr
+        baseData                :: ShaderData PerspectiveUniforms '[]
+        baseData                = ShaderData (perspectiveUniforms (fromIntegral <$> viewport) cam) mempty
+        baseTex                 = baseDescr^.renderTargets.to baseColorChannel
+
+        skyData                 = skyFrameData viewport cam
+        skyChannels             = RenderTarget "fbo-sky" SkyInChannels
+                                    { sBufferChannel = baseDescr^.renderTargets.to baseColorChannel
+                                    , sDepthChannel  = baseDescr^.renderTargets.to baseDepthChannel
+                                    }
+        runSkyPass              = runRenderPass $ skyPass skyChannels viewport
+    in do
+    baseData `runBasePass` ( toSceneEntity cam <$> scene^.sceneEntities )
+    skyData  `runSkyPass`  ( toSkyEntity <$> scene^.sceneEnvironment.envSky.to repack )
+
+    guiTex <- runGuiPass baseTex viewport ( scene^.sceneGui )
+
+    screenPass viewport [ baseTex, guiTex ]
+
+
+data CubeMappedChannels = CubeMappedChannels
+    { baseColorChannel :: Texture
+    , baseDepthChannel :: Texture
+    }
+
+type SceneEntityUni = [ YModelMatrix, YNormalMatrix ]
+
+type CubeMappedShader = Shader (PerspectiveUniforms ++ SceneEntityUni) '[] GeoVertex
+type CubeMappedPass = PassDescr CubeMappedChannels CubeMappedShader
+
+
+
+simpleCubeMapped :: Viewport Int -> CubeMappedPass
+simpleCubeMapped viewport =
+    let thePass     = passPreset target (viewport^.rectangle) (ShaderUnit shaderProg)
+        clearBuffer = (thePass^.passPreRendering) >> io (GL.clear [ GL.DepthBuffer ])
+    in thePass & passPreRendering .~ clearBuffer
+
+    where
+
+    shaderProg = ShaderProgramUnit
+                 { _shaderName       = "YageCubeMapTool.hs"
+                 , _shaderSources    = [ baseVertexProgram^.shaderSource
+                                       , baseFragmentProgram^.shaderSource
+                                       ]
+                 }
+
+    target  = RenderTarget "cubed-fbo" $ CubeMappedChannels
+                { baseColorChannel = mkTargetTexture "base-color" baseSpec
+                , baseDepthChannel = mkTargetTexture "base-depth"  depthSpec
+                }
+
+    baseSpec   = Mat.mkTextureSpec' (viewport^.rectangle.extend) GL.RGBA
+    depthSpec  = Mat.mkTextureSpec (viewport^.rectangle.extend) GL.UnsignedByte GL.DepthComponent GL.DepthComponent24
+
+
+
+toSceneEntity :: Camera -> SceneEntity -> RenderEntity GeoVertex (ShaderData SceneEntityUni '[])
+toSceneEntity camera ent = toRenderEntity shaderData ent
+    where
+    shaderData = ShaderData uniforms RNil
+    uniforms =
+        modelMatrix       =: ( ent^.entityTransformation.transformationMatrix & traverse.traverse %~ realToFrac )           <+>
+        normalMatrix      =: ( theNormalMatrix & traverse.traverse %~ realToFrac )
+
+    theNormalMatrix :: M33 Double
+    theNormalMatrix =
+        let invCam        = camera & cameraTransformation %~ inverseTransformation
+            invViewM      = fmap realToFrac <$> invCam^.cameraMatrix
+            invModelM     = ent^.entityTransformation.to inverseTransformation.transformationMatrix
+        in adjoint $ invModelM^.to m44_to_m33 !*! invViewM^.to m44_to_m33
+
+
+instance FramebufferSpec CubeMappedChannels RenderTargets where
+    fboColors CubeMappedChannels{baseColorChannel} =
+        [ Attachment (ColorAttachment 0) $ TextureTarget GL.Texture2D baseColorChannel 0
+        ]
+
+    fboDepth CubeMappedChannels{baseDepthChannel} =
+        Just $ Attachment DepthAttachment $ TextureTarget GL.Texture2D baseDepthChannel 0
+
+
+-------------------------------------------------------------------------------
+-- | Vertex code
+baseVertexProgram :: GLSL.ShaderSource VertexShader
+baseVertexProgram = [GLSL.yVertex|
+#version 410 core
+
+uniform mat4 ViewMatrix          = mat4(1.0);
+uniform mat4 VPMatrix            = mat4(1.0);
+uniform mat4 ModelMatrix         = mat4(1.0);
+uniform mat3 NormalMatrix        = mat3(1.0);
+
+// naturally in model-space
+in vec3 vPosition;
+in vec2 vTexture;
+in vec3 vTangentX;
+in vec4 vTangentZ;
+
+out mat3 TangentToView;
+
+void main()
+{
+    mat4 ModelToView     = ViewMatrix * ModelMatrix;
+    mat4 ModelToProj     = VPMatrix * ModelMatrix;
+
+
+    vec3 tangentZ        = normalize( NormalMatrix * vTangentZ.xyz );
+    vec3 tangentX        = normalize( NormalMatrix * vTangentX.xyz );
+    vec3 tangentY        = normalize( cross( tangentZ, tangentX ) * vTangentZ.w );
+    TangentToView        = mat3( tangentX, tangentY, tangentZ );
+
+    gl_Position     = ModelToProj * vec4( vPosition, 1.0 );
+}
+
+|]
+
+-------------------------------------------------------------------------------
+-- | Fragment code
+baseFragmentProgram :: GLSL.ShaderSource FragmentShader
+baseFragmentProgram = [GLSL.yFragment|
+#version 410 core
+
+uniform samplerCube EnvironmentCubeMap;
+
+smooth in mat3 TangentToView;
+
+// Red Green Blue Depth
+layout (location = 0) out vec4 OutColor;
+
+void main()
+{
+    vec3 normal = normalize ( TangentToView * vec3(0, 0, 1) );
+    OutColor.rgb = texture( EnvironmentCubeMap, normal ).rgb;
+    OutColor.a   = 1.0;
+}
+|]
