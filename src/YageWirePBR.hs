@@ -121,7 +121,7 @@ pbrTestScene = proc () -> do
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        tex <- cubeTexture <$> sequenceA (constTextureW <$> skyTex) -< ()
+        tex <- cubeTextureToTexture "SkyCube" <$> sequenceA (constTextureW <$> skyTex) -< ()
         returnA -< skydome & materials.Mat.matTexture .~ tex
                            & materials.Mat.matTexture
                                 .textureConfig
