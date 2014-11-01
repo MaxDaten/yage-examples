@@ -181,8 +181,10 @@ cubemapPipeline viewport scene =
     let cam                     = scene^.sceneCamera.hdrCameraHandle
         baseDescr               = simpleCubeMapped viewport
         runBasePass             = runRenderPass baseDescr
-        baseData                :: ShaderData PerspectiveUniforms '[]
-        baseData                = ShaderData (perspectiveUniforms (fromIntegral <$> viewport) cam) mempty
+        envMap                  = (scene^.sceneEnvironment.envSky^?!_Just)^.materials
+        baseData                :: ShaderData PerspectiveUniforms '[ TextureSampler "EnvironmentCubeMap" ]
+        baseData                = ShaderData ( perspectiveUniforms (fromIntegral <$> viewport) cam ) RNil
+                                    & shaderTextures <<+>~ ( textureSampler =: (envMap^.Mat.matTexture) )
         baseTex                 = baseDescr^.renderTargets.to baseColorChannel
 
         skyData                 = skyFrameData viewport cam
@@ -207,7 +209,7 @@ data CubeMappedChannels = CubeMappedChannels
 
 type SceneEntityUni = [ YModelMatrix, YNormalMatrix ]
 
-type CubeMappedShader = Shader (PerspectiveUniforms ++ SceneEntityUni) '[] GeoVertex
+type CubeMappedShader = Shader (PerspectiveUniforms ++ SceneEntityUni) '[ YMaterialTex "EnvironmentCubeMap" ] GeoVertex
 type CubeMappedPass = PassDescr CubeMappedChannels CubeMappedShader
 
 
@@ -268,10 +270,10 @@ baseVertexProgram :: GLSL.ShaderSource VertexShader
 baseVertexProgram = [GLSL.yVertex|
 #version 410 core
 
-uniform mat4 ViewMatrix          = mat4(1.0);
-uniform mat4 VPMatrix            = mat4(1.0);
-uniform mat4 ModelMatrix         = mat4(1.0);
-uniform mat3 NormalMatrix        = mat3(1.0);
+uniform mat4 ViewMatrix;
+uniform mat4 VPMatrix;
+uniform mat4 ModelMatrix;
+uniform mat3 NormalMatrix;
 
 // naturally in model-space
 in vec3 vPosition;
@@ -303,6 +305,7 @@ baseFragmentProgram :: GLSL.ShaderSource FragmentShader
 baseFragmentProgram = [GLSL.yFragment|
 #version 410 core
 
+uniform mat4 ViewMatrix;
 uniform samplerCube EnvironmentCubeMap;
 
 smooth in mat3 TangentToView;
@@ -312,7 +315,7 @@ layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-    vec3 normal = normalize ( TangentToView * vec3(0, 0, 1) );
+    vec3 normal  = normalize ( inverse(mat3(ViewMatrix)) * TangentToView * vec3(0, 0, 1) );
     OutColor.rgb = texture( EnvironmentCubeMap, normal ).rgb;
     OutColor.a   = 1.0;
 }
