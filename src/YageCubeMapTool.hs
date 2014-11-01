@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE DataKinds             #-}
@@ -15,7 +16,7 @@ module Main where
 
 import           Yage
 import           Yage.Lens                 hiding ( (<.>) )
-import           Yage.Math
+import           Yage.Math                 hiding ( lerp )
 import           Yage.Wire                 hiding ( at, (<>), (<+>) )
 
 import           Yage.Camera
@@ -56,19 +57,27 @@ winSettings = WindowConfig
 appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
-
-main :: IO ()
-main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
-
 -------------------------------------------------------------------------------
 -- View Definition
+data CubeMapMode = SurfaceNormal | ViewReflection
+    deriving ( Show, Ord, Eq, Enum )
 
+data SceneSettings = SceneSettings
+    { _cubeMapMode :: CubeMapMode
+    } deriving ( Show, Ord, Eq )
+
+makeLenses ''SceneSettings
 
 type SceneEntity      = Entity (Mesh GeoVertex) ()
 type SceneEnvironment = Environment Light SkyEntity
 type CubeMapScene     = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeMapScene
+
+main :: IO ()
+main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
+
+
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () (CubeMapScene, SceneSettings)
 mainWire = proc () -> do
     cam <- hdrCameraHandle `overA` cameraControl -< camera
     sky <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
@@ -77,10 +86,13 @@ mainWire = proc () -> do
 
     dummy <- (entityOrientation `overA` previewRotationByInput) . dummyEntityW modelRes -< ()
 
-    returnA -< emptyScene cam gui
-                & sceneSky      ?~ sky
-                & sceneEntities .~ fromList [ dummy ]
-                & sceneLights   .~ fromList [ mainLight, specLight ]
+    let settings = SceneSettings ViewReflection
+        scene    :: CubeMapScene
+        scene    = emptyScene cam gui
+                    & sceneSky      ?~ sky
+                    & sceneEntities .~ fromList [ dummy ]
+                    & sceneLights   .~ fromList [ mainLight, specLight ]
+    returnA -< ( scene, settings )
 
 
     where
@@ -176,14 +188,15 @@ previewRotationByInput =
 -- Render Pass Definition
 
 
-cubemapPipeline :: Viewport Int -> CubeMapScene -> RenderSystem ()
-cubemapPipeline viewport scene =
+cubemapPipeline :: Viewport Int -> (CubeMapScene, SceneSettings) -> RenderSystem ()
+cubemapPipeline viewport (scene, settings) =
     let cam                     = scene^.sceneCamera.hdrCameraHandle
         baseDescr               = simpleCubeMapped viewport
         runBasePass             = runRenderPass baseDescr
         envMap                  = (scene^.sceneEnvironment.envSky^?!_Just)^.materials
-        baseData                :: ShaderData PerspectiveUniforms '[ TextureSampler "EnvironmentCubeMap" ]
+        baseData                :: ShaderData SceneFrameUni '[ TextureSampler "EnvironmentCubeMap" ]
         baseData                = ShaderData ( perspectiveUniforms (fromIntegral <$> viewport) cam ) RNil
+                                    & shaderUniforms <<+>~ ( SField =: (fromIntegral . fromEnum $ settings^.cubeMapMode) )
                                     & shaderTextures <<+>~ ( textureSampler =: (envMap^.Mat.matTexture) )
         baseTex                 = baseDescr^.renderTargets.to baseColorChannel
 
@@ -208,10 +221,9 @@ data CubeMappedChannels = CubeMappedChannels
     }
 
 type SceneEntityUni = [ YModelMatrix, YNormalMatrix ]
-
-type CubeMappedShader = Shader (PerspectiveUniforms ++ SceneEntityUni) '[ YMaterialTex "EnvironmentCubeMap" ] GeoVertex
+type SceneFrameUni  = PerspectiveUniforms ++ '["SurfaceNormal" ::: V1 GL.GLint]
+type CubeMappedShader = Shader (SceneFrameUni ++ SceneEntityUni) '[ YMaterialTex "EnvironmentCubeMap" ] GeoVertex
 type CubeMappedPass = PassDescr CubeMappedChannels CubeMappedShader
-
 
 
 simpleCubeMapped :: Viewport Int -> CubeMappedPass
@@ -263,6 +275,8 @@ instance FramebufferSpec CubeMappedChannels RenderTargets where
     fboDepth CubeMappedChannels{baseDepthChannel} =
         Just $ Attachment DepthAttachment $ TextureTarget GL.Texture2D baseDepthChannel 0
 
+instance LinearInterpolatable (CubeMapScene, SceneSettings) where
+    lerp alpha u v = (lerp alpha (u^._1) (v^._1), v^._2)
 
 -------------------------------------------------------------------------------
 -- | Vertex code
@@ -282,6 +296,7 @@ in vec3 vTangentX;
 in vec4 vTangentZ;
 
 out mat3 TangentToView;
+out vec3 positionView;
 
 void main()
 {
@@ -294,6 +309,7 @@ void main()
     vec3 tangentY        = normalize( cross( tangentZ, tangentX ) * vTangentZ.w );
     TangentToView        = mat3( tangentX, tangentY, tangentZ );
 
+    positionView    = vec3( ModelToView * vec4( vPosition, 1.0 ) );
     gl_Position     = ModelToProj * vec4( vPosition, 1.0 );
 }
 
@@ -305,18 +321,37 @@ baseFragmentProgram :: GLSL.ShaderSource FragmentShader
 baseFragmentProgram = [GLSL.yFragment|
 #version 410 core
 
-uniform mat4 ViewMatrix;
+#define SURFACE_NORMAL 0
+#define VIEW_REFLECTION 1
+
+uniform mat4        ViewMatrix;
 uniform samplerCube EnvironmentCubeMap;
+uniform int         SurfaceNormal;
+uniform vec3        eyeIn;
 
 smooth in mat3 TangentToView;
+smooth in vec3 positionView;
 
 // Red Green Blue Depth
 layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-    vec3 normal  = normalize ( inverse(mat3(ViewMatrix)) * TangentToView * vec3(0, 0, 1) );
-    OutColor.rgb = texture( EnvironmentCubeMap, normal ).rgb;
+    mat4 ViewToWorld = inverse( ViewMatrix );
+    vec3 normal  = normalize (TangentToView * vec3(0, 0, 1) );
+
+    vec3 dir;
+    if ( SurfaceNormal == SURFACE_NORMAL )
+    {
+        dir = vec3( ViewToWorld * vec4( normal, 0.0 ) );;
+    }
+    else
+    {
+        vec3 eyeIn = normalize( positionView );
+        dir = vec3( ViewToWorld * vec4(reflect( eyeIn, normal ), 0.0) );
+    }
+
+    OutColor.rgb = texture( EnvironmentCubeMap, dir ).rgb;
     OutColor.a   = 1.0;
 }
 |]
