@@ -14,7 +14,7 @@
 
 module Main where
 
-import           Yage
+import           Yage                      hiding ( until )
 import           Yage.Lens                 hiding ( (<.>) )
 import           Yage.Math                 hiding ( lerp )
 import           Yage.Wire                 hiding ( at, (<>), (<+>) )
@@ -77,16 +77,18 @@ main :: IO ()
 main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
 
 
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () (CubeMapScene, SceneSettings)
+mainWire :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t) => YageWire t () (CubeMapScene, SceneSettings)
 mainWire = proc () -> do
     cam <- hdrCameraHandle `overA` cameraControl -< camera
     sky <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
 
     gui <- guiWire -< ()
 
-    dummy <- (entityOrientation `overA` previewRotationByInput) . dummyEntityW modelRes -< ()
+    dummy <- {--(entityOrientation `overA` previewRotationByInput) .--} dummyEntityW modelRes -< ()
 
-    let settings = SceneSettings ViewReflection
+    cubeMode <- toggle (keyJustPressed Key'N) SurfaceNormal ViewReflection -< ()
+
+    let settings = SceneSettings cubeMode
         scene    :: CubeMapScene
         scene    = emptyScene cam gui
                     & sceneSky      ?~ sky
@@ -150,7 +152,6 @@ mainWire = proc () -> do
 
     guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () GUI
     guiWire = pure emptyGUI
-
 
 
 -- Camera Control Wires

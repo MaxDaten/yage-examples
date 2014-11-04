@@ -65,7 +65,7 @@ type SceneEnvironment = Environment Light SkyEntity
 type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 
-pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () PBRScene
+pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Show t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
 
     hdrCam <- hdrCamera -< ()
@@ -96,18 +96,13 @@ pbrTestScene = proc () -> do
         in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
     hdrController =
-         hdrExposure      <~~ stepValue 2.0 ( (Key'Period, 0.05), (Key'Comma, 0.05) ) >>>
-         hdrExposureBias  <~~ stepValue 0.0 ( (Key'M     , 0.01), (Key'N    , 0.01) ) >>>
+         hdrExposure      <~~ ( spin (-10, 10) 2.0 <<< ((0.05 <$) <$> keyJustPressed Key'Period)  &&&
+                                                       ((0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
+
+         hdrExposureBias  <~~ ( spin (-10, 10) 0.0 <<< ((0.01 <$) <$> keyJustPressed Key'M)       &&&
+                                                       ((0.01 <$) <$> keyJustPressed Key'N) )     >>>
          hdrWhitePoint    <~~ pure 11.2       >>>
          hdrBloomSettings <~~ pure bloomSettings
-
-        where
-
-        stepValue initV ((upKey, upStep), (downKey, downStep)) = proc _ -> do
-            addVal <- hold . sumE . keyJustPressed upKey    <|> 0 -< upStep
-            subVal <- hold . sumE . keyJustPressed downKey  <|> 0 -< downStep
-            -- exposureValue <- integral 2.0 . derivative -< addVal - subVal
-            returnA -< initV + addVal - subVal
 
 
     bloomSettings =
