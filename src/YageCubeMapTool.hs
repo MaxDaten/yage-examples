@@ -77,7 +77,7 @@ main :: IO ()
 main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
 
 
-mainWire :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t, Fractional t) => YageWire t () (CubeMapScene, SceneSettings)
+mainWire :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (CubeMapScene, SceneSettings)
 mainWire = proc () -> do
     cam <- hdrCameraHandle `overA` cameraControl -< camera
     sky <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
@@ -164,10 +164,10 @@ mouseSensitivity = V2 0.1 0.1
 wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: (Real t, Fractional t) => YageWire t () (V2 Double)
+mouseControlled :: (Real t) => YageWire t () (V2 Double)
 mouseControlled = (whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity) <|> 0
 
-cameraControl :: (Real t, Show t, Fractional t) => YageWire t Camera Camera
+cameraControl :: (Real t) => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
 
