@@ -77,7 +77,7 @@ main :: IO ()
 main = yageMain "yage-material" appConf winSettings mainWire cubemapPipeline (1/60)
 
 
-mainWire :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t) => YageWire t () (CubeMapScene, SceneSettings)
+mainWire :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t, Fractional t) => YageWire t () (CubeMapScene, SceneSettings)
 mainWire = proc () -> do
     cam <- hdrCameraHandle `overA` cameraControl -< camera
     sky <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
@@ -137,11 +137,11 @@ mainWire = proc () -> do
     skyDomeW = proc pos -> do
         let cubeTex = cubeTextureToTexture "SkyCube" $ mkTexture2D "" <$>
              Cube  { cubeFaceRight  = Mat.TexRGB8 `Mat.pxTexture` Mat.red
-                   , cubeFaceLeft   = Mat.TexRGB8 `Mat.pxTexture` Mat.green
-                   , cubeFaceTop    = Mat.TexRGB8 `Mat.pxTexture` Mat.blue
-                   , cubeFaceBottom = Mat.TexRGB8 `Mat.pxTexture` Mat.cyan
-                   , cubeFaceFront  = Mat.TexRGB8 `Mat.pxTexture` Mat.magenta
-                   , cubeFaceBack   = Mat.TexRGB8 `Mat.pxTexture` Mat.yellow
+                   , cubeFaceLeft   = Mat.TexRGB8 `Mat.pxTexture` Mat.magenta
+                   , cubeFaceTop    = Mat.TexRGB8 `Mat.pxTexture` Mat.green
+                   , cubeFaceBottom = Mat.TexRGB8 `Mat.pxTexture` Mat.yellow
+                   , cubeFaceFront  = Mat.TexRGB8 `Mat.pxTexture` Mat.blue
+                   , cubeFaceBack   = Mat.TexRGB8 `Mat.pxTexture` Mat.cyan
                    }
         -- tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
         returnA -< skydome & materials.Mat.matTexture .~ cubeTex
@@ -164,11 +164,11 @@ mouseSensitivity = V2 0.1 0.1
 wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
 
-mouseControlled :: Real t => YageWire t () (V2 Double)
-mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
+mouseControlled :: (Real t, Fractional t) => YageWire t () (V2 Double)
+mouseControlled = (whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity) <|> 0
 
-cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
+cameraControl :: (Real t, Show t, Fractional t) => YageWire t Camera Camera
+cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
 
 -- Dummy Control Wires
