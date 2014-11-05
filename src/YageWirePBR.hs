@@ -96,11 +96,11 @@ pbrTestScene = proc () -> do
         in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
     hdrController =
-         hdrExposure      <~~ ( spin (-10, 10) 2.0 <<< ((0.05 <$) <$> keyJustPressed Key'Period)  &&&
-                                                       ((0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
+         hdrExposure      <~~ ( spin (-10, 10) 2.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
+                                                       ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
 
-         hdrExposureBias  <~~ ( spin (-10, 10) 0.0 <<< ((0.01 <$) <$> keyJustPressed Key'M)       &&&
-                                                       ((0.01 <$) <$> keyJustPressed Key'N) )     >>>
+         hdrExposureBias  <~~ ( spin (-10, 10) 0.0 <<< (( 0.01 <$) <$> keyJustPressed Key'M)       &&&
+                                                       ((-0.01 <$) <$> keyJustPressed Key'N) )     >>>
          hdrWhitePoint    <~~ pure 11.2       >>>
          hdrBloomSettings <~~ pure bloomSettings
 
