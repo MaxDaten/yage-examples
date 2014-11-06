@@ -13,7 +13,6 @@ dist/
 .cabal-sandbox
 cabal.sandbox.config
 cabal.config
-atlas.png
 hlint.html
 .idea/
 yage-examples.iml
