@@ -295,7 +295,7 @@ instance LinearInterpolatable (CubeMapScene, SceneSettings) where
 -------------------------------------------------------------------------------
 -- | Vertex code
 baseVertexProgram :: GLSL.ShaderSource VertexShader
-baseVertexProgram = [GLSL.yVertex|
+baseVertexProgram = [yVertex|
 #version 410 core
 
 uniform mat4 ViewMatrix;
@@ -326,13 +326,12 @@ void main()
     positionView    = vec3( ModelToView * vec4( vPosition, 1.0 ) );
     gl_Position     = ModelToProj * vec4( vPosition, 1.0 );
 }
-
 |]
 
 -------------------------------------------------------------------------------
 -- | Fragment code
 baseFragmentProgram :: GLSL.ShaderSource FragmentShader
-baseFragmentProgram = [GLSL.yFragment|
+baseFragmentProgram = [yFragment|
 #version 410 core
 
 #define SURFACE_NORMAL 0
