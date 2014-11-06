@@ -18,6 +18,8 @@ import           Yage.Lens                 hiding ( (<.>) )
 import           Yage.Math                 hiding ( lerp )
 import           Yage.Wire                 hiding ( at, (<>), (<+>) )
 
+import           Data.List                 ( cycle )
+
 import           Yage.Camera
 import           Yage.Formats.Font
 import           Yage.HDR
@@ -134,19 +136,23 @@ mainWire = proc () -> do
                 , _lightIntensity = 1
                 }
 
-    cubeMapTex =
-        let selection = amdCubemapSelection (texDir</>"env"</>"grace"</>"pmrem") "png"
-        in singleCubemapFiles selection "Grace"
+    mkCubeMapRes ident dir =
+        -- let selection = amdSeperateFiles () "png"
+        let selection = amdSeperateFiles dir "png"
+        in singleCubemapFiles selection ident
             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
-    skyDomeW :: YageWire t (V3 Double) SkyEntity
+    skyDomeW :: Real t => YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        tex <- constTextureW cubeMapTex -< ()
-        returnA -< skydome & materials.Mat.matTexture .~ tex
+        (initEvent, toggleEvent) <- now &&& keyJustPressed Key'T -< ()
+        selectedTex <- hold . allocationOnEvent . popOnEvent cubemapCycle -< initEvent `mergeL` (() <$ toggleEvent)
+        returnA -< skydome & materials.Mat.matTexture .~ selectedTex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+    cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex]
+    skyTex   = mkCubeMapRes "Sea" (texDir</>"env"</>"Sea"</>"big"</>"pmrem")
+    graceTex = mkCubeMapRes "Grace" (texDir</>"env"</>"grace"</>"pmrem")
 
     guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () GUI
     guiWire = pure emptyGUI
