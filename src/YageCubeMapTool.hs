@@ -136,11 +136,6 @@ mainWire = proc () -> do
                 , _lightIntensity = 1
                 }
 
-    mkCubeMapRes ident dir =
-        -- let selection = amdSeperateFiles () "png"
-        let selection = amdSeperateFiles dir "png"
-        in singleCubemapFiles selection ident
-            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
     skyDomeW :: Real t => YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
@@ -149,6 +144,12 @@ mainWire = proc () -> do
         returnA -< skydome & materials.Mat.matTexture .~ selectedTex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
+
+    mkCubeMapRes ident dir =
+        -- let selection = amdSeperateFiles () "png"
+        let selection = amdSeperateFiles dir "png"
+        in singleCubemapFiles selection ident
+            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
     cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex]
     skyTex   = mkCubeMapRes "Sea" (texDir</>"env"</>"Sea"</>"big"</>"pmrem")
