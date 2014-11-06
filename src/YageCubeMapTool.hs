@@ -13,7 +13,6 @@
 {-# LANGUAGE QuasiQuotes           #-}
 
 module Main where
-
 import           Yage                      hiding ( until )
 import           Yage.Lens                 hiding ( (<.>) )
 import           Yage.Math                 hiding ( lerp )
@@ -30,6 +29,8 @@ import           Yage.Texture.TextureAtlas
 
 import           Yage.UI.GUI
 import           Yage.TH.Shader as GLSL
+
+import           Yage.Formats.AMDCubeMap
 
 
 import           Yage.Examples.Shared
@@ -63,7 +64,8 @@ data CubeMapMode = SurfaceNormal | ViewReflection
     deriving ( Show, Ord, Eq, Enum )
 
 data SceneSettings = SceneSettings
-    { _cubeMapMode :: CubeMapMode
+    { _cubeMapMode      :: CubeMapMode
+    , _cubeMipMapLevel  :: Float
     } deriving ( Show, Ord, Eq )
 
 makeLenses ''SceneSettings
@@ -86,10 +88,9 @@ mainWire = proc () -> do
 
     dummy <- {--(entityOrientation `overA` previewRotationByInput) .--} dummyEntityW modelRes -< ()
 
-    cubeMode <- toggle (keyJustPressed Key'N) SurfaceNormal ViewReflection -< ()
+    settings <- settingsControl -< ()
 
-    let settings = SceneSettings cubeMode
-        scene    :: CubeMapScene
+    let scene    :: CubeMapScene
         scene    = emptyScene cam gui
                     & sceneSky      ?~ sky
                     & sceneEntities .~ fromList [ dummy ]
@@ -133,18 +134,15 @@ mainWire = proc () -> do
                 , _lightIntensity = 1
                 }
 
+    cubeMapTex =
+        let selection = amdCubemapSelection (texDir</>"env"</>"grace"</>"pmrem") "png"
+        in singleCubemapFiles selection "Grace"
+            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        let cubeTex = cubeTextureToTexture "SkyCube" $ mkTexture2D "" <$>
-             Cube  { cubeFaceRight  = Mat.TexRGB8 `Mat.pxTexture` Mat.red
-                   , cubeFaceLeft   = Mat.TexRGB8 `Mat.pxTexture` Mat.magenta
-                   , cubeFaceTop    = Mat.TexRGB8 `Mat.pxTexture` Mat.green
-                   , cubeFaceBottom = Mat.TexRGB8 `Mat.pxTexture` Mat.yellow
-                   , cubeFaceFront  = Mat.TexRGB8 `Mat.pxTexture` Mat.blue
-                   , cubeFaceBack   = Mat.TexRGB8 `Mat.pxTexture` Mat.cyan
-                   }
-        -- tex <- cubeTexture . pure <$> constTextureW skyTex -< ()
-        returnA -< skydome & materials.Mat.matTexture .~ cubeTex
+        tex <- constTextureW cubeMapTex -< ()
+        returnA -< skydome & materials.Mat.matTexture .~ tex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
@@ -171,23 +169,30 @@ cameraControl :: (Real t) => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
 
+settingsControl :: (Real t) => YageWire t () SceneSettings
+settingsControl =
+    SceneSettings <$> toggle (keyJustPressed Key'N) SurfaceNormal ViewReflection
+                  <*> ( spin (0, 10) 0 <<< (( 0.25 <$) <$> keyJustPressed Key'Period) &&&
+                                           ((-0.25 <$) <$> keyJustPressed Key'Comma) )
+
 -- Dummy Control Wires
 -- dummyControl :: Real t => YageWire t Dummy Dummy
 -- dummyControl = overA transOrientation dummyRotationByInput
 
-previewRotationByInput :: (Real t) => YageWire t (Quaternion Double) (Quaternion Double)
-previewRotationByInput =
-    let acc         = 20
-        att         = 0.87
-    in
-   smoothRotationByKey acc att ( yAxis ) Key'Right
- . smoothRotationByKey acc att (-yAxis ) Key'Left
- . smoothRotationByKey acc att ( xAxis ) Key'Up
- . smoothRotationByKey acc att (-xAxis ) Key'Down
+-- previewRotationByInput :: (Real t) => YageWire t (Quaternion Double) (Quaternion Double)
+-- previewRotationByInput =
+--     let acc         = 20
+--         att         = 0.87
+--     in
+--    smoothRotationByKey acc att ( yAxis ) Key'Right
+--  . smoothRotationByKey acc att (-yAxis ) Key'Left
+--  . smoothRotationByKey acc att ( xAxis ) Key'Up
+--  . smoothRotationByKey acc att (-xAxis ) Key'Down
 
 -------------------------------------------------------------------------------
 -- Render Pass Definition
 
+-- @TODO http://the-witness.net/news/2012/02/seamless-cube-map-filtering/
 
 cubemapPipeline :: Viewport Int -> (CubeMapScene, SceneSettings) -> RenderSystem ()
 cubemapPipeline viewport (scene, settings) =
@@ -198,6 +203,7 @@ cubemapPipeline viewport (scene, settings) =
         baseData                :: ShaderData SceneFrameUni '[ TextureSampler "EnvironmentCubeMap" ]
         baseData                = ShaderData ( perspectiveUniforms (fromIntegral <$> viewport) cam ) RNil
                                     & shaderUniforms <<+>~ ( SField =: (fromIntegral . fromEnum $ settings^.cubeMapMode) )
+                                    & shaderUniforms <<+>~ ( textureLod     =: (realToFrac $ settings^.cubeMipMapLevel))
                                     & shaderTextures <<+>~ ( textureSampler =: (envMap^.Mat.matTexture) )
         baseTex                 = baseDescr^.renderTargets.to baseColorChannel
 
@@ -221,10 +227,10 @@ data CubeMappedChannels = CubeMappedChannels
     , baseDepthChannel :: Texture
     }
 
-type SceneEntityUni = [ YModelMatrix, YNormalMatrix ]
-type SceneFrameUni  = PerspectiveUniforms ++ '["SurfaceNormal" ::: V1 GL.GLint]
+type SceneEntityUni   = [ YModelMatrix, YNormalMatrix ]
+type SceneFrameUni    = PerspectiveUniforms ++ '["SurfaceNormal" ::: V1 GL.GLint, TextureLod "MipMapLevel"]
 type CubeMappedShader = Shader (SceneFrameUni ++ SceneEntityUni) '[ YMaterialTex "EnvironmentCubeMap" ] GeoVertex
-type CubeMappedPass = PassDescr CubeMappedChannels CubeMappedShader
+type CubeMappedPass   = PassDescr CubeMappedChannels CubeMappedShader
 
 
 simpleCubeMapped :: Viewport Int -> CubeMappedPass
@@ -327,6 +333,7 @@ baseFragmentProgram = [GLSL.yFragment|
 
 uniform mat4        ViewMatrix;
 uniform samplerCube EnvironmentCubeMap;
+uniform float       MipMapLevel;
 uniform int         SurfaceNormal;
 uniform vec3        eyeIn;
 
@@ -352,7 +359,7 @@ void main()
         dir = vec3( ViewToWorld * vec4(reflect( eyeIn, normal ), 0.0) );
     }
 
-    OutColor.rgb = texture( EnvironmentCubeMap, dir ).rgb;
+    OutColor.rgb = textureLod( EnvironmentCubeMap, dir, MipMapLevel ).rgb;
     OutColor.a   = 1.0;
 }
 |]
