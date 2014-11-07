@@ -117,7 +117,7 @@ mainWire = proc () -> do
                         & hdrWhitePoint         .~ 11.2
                         & hdrBloomSettings      .~ bloomSettings
 
-    modelRes = meshResource $ loadYGM geoVertex $ ("res"</>"model"</>"sphere"<.>"ygm", mempty)
+    modelRes = meshRes $ loadYGM geoVertex $ ("res"</>"model"</>"sphere"<.>"ygm", mempty)
 
     dummyEntityW :: YageResource (Mesh GeoVertex) -> YageWire t () SceneEntity
     dummyEntityW meshRes = proc () -> do
@@ -146,10 +146,9 @@ mainWire = proc () -> do
                            & entityScale              .~ 50
 
     mkCubeMapRes ident dir =
-        -- let selection = amdSeperateFiles () "png"
         let selection = amdSeperateFiles dir "png"
-        in singleCubemapFiles selection ident
-            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+        in (mkTextureCubeMip ident <$> singleCubemapMipFiles selection)
+                <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
     cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex]
     skyTex   = mkCubeMapRes "Sea" (texDir</>"env"</>"Sea"</>"big"</>"pmrem")

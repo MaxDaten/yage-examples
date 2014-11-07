@@ -127,8 +127,8 @@ mainWire = proc () -> do
 
     headEntityW :: YageWire t b GeoEntity
     headEntityW =
-        let albedoTex = textureResource $ texDir</>"head"</>"small"</>"head_albedo.jpg"
-            normalTex = textureResource $ texDir</>"head"</>"small"</>"head_tangent.jpg"
+        let albedoTex = mkTexture2D "Albedo" <$> (imageRes $ texDir</>"head"</>"small"</>"head_albedo.jpg")
+            normalTex = mkTexture2D "Tangent" <$> (imageRes $ texDir</>"head"</>"small"</>"head_tangent.jpg")
         in (pure (basicEntity :: GeoEntity)
                 >>> renderData <~~ constMeshW headMesh
                 >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
@@ -139,7 +139,7 @@ mainWire = proc () -> do
                 <&> entityPosition      .~ V3 0 0.5 0
 
     headMesh :: YageResource (Mesh GeoVertex)
-    headMesh = meshResource $ loadYGM geoVertex ( "res" </> "model" </> "head.ygm", mkSelection [] )
+    headMesh = meshRes $ loadYGM geoVertex ( "res" </> "model" </> "head.ygm", mkSelection [] )
 
     bloomSettings   = defaultBloomSettings
                         & bloomFactor           .~ 1

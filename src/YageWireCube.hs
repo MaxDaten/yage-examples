@@ -79,8 +79,8 @@ mainWire = proc _ -> do
 
     boxEntityW :: YageWire t b GeoEntity
     boxEntityW =
-        let albedoTex = textureResource $ texDir</>"floor_d"<.>"png"
-            normalTex = textureResource $ texDir</>"floor_n"<.>"png"
+        let albedoTex = mkTexture2D "FloorD" <$> (imageRes $ texDir</>"floor_d"<.>"png")
+            normalTex = mkTexture2D "FloorN" <$> (imageRes $ texDir</>"floor_n"<.>"png")
         in (pure (basicEntity :: GeoEntity)
                 >>> renderData <~~ constMeshW boxMesh
                 >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
@@ -91,7 +91,7 @@ mainWire = proc _ -> do
 
 
     boxMesh :: YageResource (Mesh GeoVertex)
-    boxMesh = meshResource $ loadYGM geoVertex ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
+    boxMesh = meshRes $ loadYGM geoVertex ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
@@ -100,7 +100,7 @@ mainWire = proc _ -> do
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+    skyTex  = mkTexture2D "SkyBlueprint" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
 
     bloomSettings   = defaultBloomSettings
                         & bloomFactor           .~ 0.7

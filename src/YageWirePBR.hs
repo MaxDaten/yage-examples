@@ -82,7 +82,7 @@ pbrTestScene = proc () -> do
     where
     texDir  = "res"</>"tex"
 
-    sphereMesh = meshResource $ loadYGM geoVertex ("res" </> "model" </> "sphere.ygm", mempty)
+    sphereMesh = meshRes $ loadYGM geoVertex ("res" </> "model" </> "sphere.ygm", mempty)
 
     spheresW   = proc _ -> do
         sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
@@ -128,7 +128,7 @@ pbrTestScene = proc () -> do
     skyTex  =
         let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
             ext             = "jpg"
-            fileRes file    = textureResource $ envPath </> file <.> ext
+            fileRes file    = mkTexture2D (fromString . fpToString $ file) <$> (imageRes $ envPath </> file <.> ext)
         in Mat.Cube
             { cubeFaceRight = fileRes "posx", cubeFaceLeft   = fileRes "negx"
             , cubeFaceTop   = fileRes "posy", cubeFaceBottom = fileRes "negy"
@@ -147,9 +147,9 @@ pbrTestScene = proc () -> do
 
     groundMaterialW :: YageWire t GeoMaterial GeoMaterial
     groundMaterialW =
-          ( albedoMaterial.Mat.matTexture    <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_d.png" )
-        >>> normalMaterial.Mat.matTexture    <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_n.png" )
-        >>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( textureResource $ "res" </> "tex" </> "floor_r.png" ))
+          ( albedoMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorD" <$> (imageRes $ "res" </> "tex" </> "floor_d.png") )
+        >>> normalMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorN" <$> (imageRes $ "res" </> "tex" </> "floor_n.png") )
+        >>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( mkTexture2D "FloorR" <$> (imageRes $ "res" </> "tex" </> "floor_r.png") ))
         <&> albedoMaterial.Mat.stpFactor   *~ 4.0
         <&> normalMaterial.Mat.stpFactor   *~ 2.0
         <&> normalMaterial.Mat.stpFactor   *~ 2.0

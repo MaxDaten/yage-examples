@@ -94,13 +94,13 @@ mainWire = proc () -> do
                         & hdrBloomSettings      .~ bloomSettings
 
     meshFile = "res"</>"model"</>"meshpreview"<.>"ygm"
-    modelRes = meshResource $ loadYGM geoVertex $ (meshFile, mempty)
+    modelRes = meshRes $ loadYGM geoVertex $ (meshFile, mempty)
 
     albedoFile = texDir </> "floor_d" <.> "png"
     normalFile = texDir </> "floor_n" <.> "png"
     albeoTex, normalTex :: YageResource Texture
-    albeoTex   = textureResource albedoFile
-    normalTex  = textureResource normalFile
+    albeoTex   = mkTexture2D "Albedo" <$> imageRes albedoFile
+    normalTex  = mkTexture2D "Normal" <$> imageRes normalFile
 
     dummyEntityW :: YageResource (Mesh GeoVertex) -> YageResource Texture -> YageResource Texture -> YageWire t () GeoEntity
     dummyEntityW meshRes albedoRes normalRes = proc () -> do
@@ -131,14 +131,14 @@ mainWire = proc () -> do
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+    skyTex  = mkTexture2D "SkyTexture" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
 
-    fontRes = fontResource $ "res"</>"font"</>"yft"</>"SourceCodePro-Regular1024.yft"
-    imgRes  = textureResource $ "res"</>"tex"</>"misc"</>"Linear-ZonePlate.png"
+    font    = fontRes $ "res"</>"font"</>"yft"</>"SourceCodePro-Regular1024.yft"
+    imgRes  = mkTexture2D "LinearZone" <$> (imageRes $ "res"</>"tex"</>"misc"</>"Linear-ZonePlate.png")
 
     guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t (FilePath, FilePath, FilePath) GUI
     guiWire = proc (meshFile, albedoFile, normalFile) -> do
-        fontTex <- constFontW fontRes -< ()
+        fontTex <- constFontW font -< ()
         imgTex  <- constTextureW imgRes -< ()
         t       <- time -< ()
         fps     <- avgFps 60 -< ()

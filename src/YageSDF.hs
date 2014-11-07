@@ -76,8 +76,8 @@ mainWire =
     let bgrColor  = Mat.TexRGB8 `Mat.pxTexture` Mat.thistle
         bgr       = mkTexture2D "Background" bgrColor
         txtColor  = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
-        bitmapRes = textureResource $ "res" </> "tex" </> "char" </> "char-66.png"
-        sdfRes    = textureResource $ "res" </> "tex" </> "char" </> "char-66-sdf-50perc.png"
+        bitmapRes = mkTexture2D "char66" <$> (imageRes $ "res" </> "tex" </> "char" </> "char-66.png")
+        sdfRes    = mkTexture2D "char66-50p" <$> (imageRes $ "res" </> "tex" </> "char" </> "char-66-sdf-50perc.png")
     in proc _ -> do
         factor  <- whileKeyDown Key'A . arr (1.0+) . arr sin . arr (*0.5) . time <|> 1 -< ()
         bitmapTex  <- constTextureW bitmapRes -< ()

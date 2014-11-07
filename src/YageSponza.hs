@@ -69,16 +69,19 @@ mainWire = proc () -> do
     where
     texDir      = "res" </> "tex"
 
-    sponzaModel = meshResource $ loadYGM geoVertex $ ( "res" </> "model" </> "env" </> "sponza.ygm", mkSelection [] )
+    sponzaModel = meshRes $ loadYGM geoVertex $ ( "res" </> "model" </> "env" </> "sponza.ygm", mkSelection [] )
 
-    worldEntityW= proc () -> do
-        entity <- renderData <~~ constMeshW sponzaModel
-            >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW (textureResource $ texDir</>"default"<.>"png")
-            >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW (textureResource $ texDir</>"floor_n"<.>"png") -< basicEntity :: SceneEntity
+    worldEntityW =
+        let albedoTex = mkTexture2D "Albedo" <$> (imageRes $ texDir</>"default"<.>"png")
+            normalTex = mkTexture2D "Normal" <$> (imageRes $ texDir</>"floor_n"<.>"png")
+        in proc () -> do
+            entity <- renderData <~~ constMeshW sponzaModel
+                >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
+                >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW normalTex -< basicEntity :: SceneEntity
 
-        returnA -< entity & materials.albedoMaterial.Mat.stpFactor .~ 2.0
-                          & materials.normalMaterial.Mat.stpFactor .~ 2.0
-                          & entityScale //~ 200
+            returnA -< entity & materials.albedoMaterial.Mat.stpFactor .~ 2.0
+                              & materials.normalMaterial.Mat.stpFactor .~ 2.0
+                              & entityScale //~ 200
 
     baseLight p = Light
                     { _lightType      = Pointlight p 10
@@ -94,7 +97,7 @@ mainWire = proc () -> do
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    skyTex  = textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+    skyTex  = mkTexture2D "SkyTexture" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
 
     camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,10000) )
                         & hdrExposure           .~ 2
