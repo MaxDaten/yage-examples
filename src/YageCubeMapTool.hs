@@ -150,10 +150,12 @@ mainWire = proc () -> do
         in (mkTextureCubeMip ident <$> singleCubemapMipFiles selection)
                 <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
-    cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex]
-    skyTex   = mkCubeMapRes "Sea" (texDir</>"env"</>"Sea"</>"big"</>"pmrem")
-    graceTex = mkCubeMapRes "Grace" (texDir</>"env"</>"grace"</>"pmrem")
-
+    cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex, graceCrossTex]
+    skyTex        = mkCubeMapRes "Sea"   $ texDir </> "env" </> "Sea" </> "big" </> "pmrem"
+    graceTex      = mkCubeMapRes "Grace" $ texDir </> "env" </> "grace" </> "pmrem"
+    graceCrossTex = mkTextureCubeMip "GraceCross" <$>
+                        cubeCrossMipsRes VerticalCross (texDir</>"env"</>"grace"</>"pmrem"</>"grace_m<->.png")
+                            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
     guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () GUI
     guiWire = pure emptyGUI
 
@@ -178,8 +180,8 @@ cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement c
 settingsControl :: (Real t) => YageWire t () SceneSettings
 settingsControl =
     SceneSettings <$> toggle (keyJustPressed Key'N) SurfaceNormal ViewReflection
-                  <*> ( spin (0, 10) 0 <<< (( 0.25 <$) <$> keyJustPressed Key'Period) &&&
-                                           ((-0.25 <$) <$> keyJustPressed Key'Comma) )
+                  <*> ( spin (0, 10) 0 <<< (( 1 <$) <$> keyJustPressed Key'Period) &&&
+                                           ((-1 <$) <$> keyJustPressed Key'Comma) )
 
 -- Dummy Control Wires
 -- dummyControl :: Real t => YageWire t Dummy Dummy
