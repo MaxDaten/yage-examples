@@ -145,13 +145,15 @@ mainWire = proc () -> do
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    mkCubeMapRes ident dir =
-        let selection = amdSeperateFiles dir "png"
-        in (mkTextureCubeMip ident <$> singleCubemapMipFiles selection)
-                <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+    -- mkCubeMapRes ident dir =
+    --     let selection = amdSeperateFiles dir "png"
+    --     in (mkTextureCubeMip ident <$> singleCubemapMipFiles selection)
+    --             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
     cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceCrossTex]
-    skyTex        = mkCubeMapRes "Sea"   $ texDir </> "env" </> "Sea" </> "big" </> "pmrem"
+    skyTex        = mkTextureCubeMip "SeaCross" <$>
+                        cubeCrossMipsRes VerticalCross (texDir</>"env"</>"Sea"</>"pmrem"</>"sea_m<->.png")
+                            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
     graceCrossTex = mkTextureCubeMip "GraceCross" <$>
                         cubeCrossMipsRes VerticalCross (texDir</>"env"</>"grace"</>"pmrem"</>"grace_m<->.png")
                             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
