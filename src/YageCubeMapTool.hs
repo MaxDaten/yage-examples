@@ -150,9 +150,8 @@ mainWire = proc () -> do
         in (mkTextureCubeMip ident <$> singleCubemapMipFiles selection)
                 <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
-    cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceTex, graceCrossTex]
+    cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceCrossTex]
     skyTex        = mkCubeMapRes "Sea"   $ texDir </> "env" </> "Sea" </> "big" </> "pmrem"
-    graceTex      = mkCubeMapRes "Grace" $ texDir </> "env" </> "grace" </> "pmrem"
     graceCrossTex = mkTextureCubeMip "GraceCross" <$>
                         cubeCrossMipsRes VerticalCross (texDir</>"env"</>"grace"</>"pmrem"</>"grace_m<->.png")
                             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
