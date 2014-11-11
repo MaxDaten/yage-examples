@@ -40,7 +40,7 @@ import Data.Traversable (sequenceA)
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (800, 600)
+    { windowSize = (1600, 1000)
     , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
@@ -86,7 +86,7 @@ pbrTestScene = proc () -> do
 
     spheresW   = proc _ -> do
         sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
-        returnA -< generateOnGrid . (7, 7, V2 10 10,) $
+        returnA -< generateOnGrid . (10, 1, V2 10 1, 2, ) $
                     sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.white
                            & entityScale //~ 2
 
@@ -108,9 +108,9 @@ pbrTestScene = proc () -> do
     bloomSettings =
         defaultBloomSettings
             & bloomFactor           .~ 0.7
-            & bloomPreDownsampling  .~ 2
+            & bloomPreDownsampling  .~ 1
             & bloomGaussPasses      .~ 5
-            & bloomWidth            .~ 2
+            & bloomWidth            .~ 1
             & bloomThreshold        .~ 0.5
 
 
@@ -180,21 +180,21 @@ pbrTestScene = proc () -> do
                                 50 60
                                 ( V3 0.1 0.1 1 ) 1
 
-generateOnGrid :: (Int, Int, V2 Double, SceneEntity) -> [SceneEntity]
-generateOnGrid (xCnt, yCnt, V2 dimX dimY, template) =
+generateOnGrid :: (Int, Int, V2 Double, Double, SceneEntity) -> [SceneEntity]
+generateOnGrid (xCnt, yCnt, V2 dimX dimY, scale, template) =
     map generate (gridIdx `zip` positions)
 
     where
 
     generate ((xi, yi), pos) =
-        let roughValue  = xi / fromIntegral xCnt
+        let roughValue  = xi / fromIntegral (xCnt-1)
             newSphere   = template & entityPosition .~ pos
                                    & materials.roughnessMaterial.Mat.matColor .~ (realToFrac roughValue)
         in newSphere
 
     positions   = map calculatePosition gridIdx
-    gridIdx     = [ (fromIntegral xi, fromIntegral yi) | xi <- [0 .. xCnt], yi <- [0 .. yCnt] ]
-    startPoint  = V3 (-dimX / 2.0) 0 (dimY / 2.0)
+    gridIdx     = [ (fromIntegral xi, fromIntegral yi) | xi <- [0 .. xCnt-1], yi <- [0 .. yCnt-1] ]
+    startPoint  = (step + V3 (-dimX) 0 (dimY)) ^* 0.5
     step        = 0 & _x .~  dimX / fromIntegral xCnt
                     & _z .~ -dimY / fromIntegral yCnt
     calculatePosition (xi, yi) =  startPoint + V3 xi 0 yi * step
@@ -203,7 +203,7 @@ generateOnGrid (xCnt, yCnt, V2 dimX dimY, template) =
 -- controller wires
 
 camStartPos :: V3 Double
-camStartPos = V3 0 1 3
+camStartPos = V3 0 1 5
 
 mouseSensitivity :: V2 Double
 mouseSensitivity = V2 0.1 0.1
