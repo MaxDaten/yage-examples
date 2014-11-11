@@ -141,7 +141,8 @@ mainWire = proc () -> do
     skyDomeW = proc pos -> do
         (initEvent, toggleEvent) <- now &&& keyJustPressed Key'T -< ()
         selectedTex <- hold . allocationOnEvent . popOnEvent cubemapCycle -< initEvent `mergeL` (() <$ toggleEvent)
-        returnA -< skydome & materials.Mat.matTexture .~ selectedTex
+        returnA -< skydome & materials.skyEnvironmentMap
+                                      .Mat.matTexture .~ selectedTex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
@@ -152,10 +153,10 @@ mainWire = proc () -> do
 
     cubemapCycle = cycle [pure defaultCubeMap, skyTex, graceCrossTex]
     skyTex        = mkTextureCubeMip "SeaCross" <$>
-                        cubeCrossMipsRes VerticalCross (texDir</>"env"</>"Sea"</>"pmrem"</>"sea_m<->.png")
+                        cubeCrossMipsRes Strip (texDir</>"env"</>"Sea"</>"pmrem"</>"sea_m<->.png")
                             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
     graceCrossTex = mkTextureCubeMip "GraceCross" <$>
-                        cubeCrossMipsRes VerticalCross (texDir</>"env"</>"grace"</>"pmrem"</>"grace_m<->.png")
+                        cubeCrossMipsRes Strip (texDir</>"env"</>"grace"</>"pmrem"</>"grace_m<->.png")
                             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
     guiWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () GUI
     guiWire = pure emptyGUI
@@ -208,7 +209,7 @@ cubemapPipeline viewport (scene, settings) =
     let cam                     = scene^.sceneCamera.hdrCameraHandle
         baseDescr               = simpleCubeMapped viewport
         runBasePass             = runRenderPass baseDescr
-        envMap                  = (scene^.sceneEnvironment.envSky^?!_Just)^.materials
+        envMap                  = (scene^.sceneEnvironment.envSky^?!_Just)^.materials.skyEnvironmentMap
         baseData                :: ShaderData SceneFrameUni '[ TextureSampler "EnvironmentCubeMap" ]
         baseData                = ShaderData ( perspectiveUniforms (fromIntegral <$> viewport) cam ) RNil
                                     & shaderUniforms <<+>~ ( SField =: (fromIntegral . fromEnum $ settings^.cubeMapMode) )

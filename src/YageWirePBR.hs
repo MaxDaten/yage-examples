@@ -77,7 +77,7 @@ pbrTestScene = proc () -> do
     returnA -< emptyScene hdrCam emptyGUI
                     & sceneSky          ?~ sky
                     & sceneEntities     .~ fromList ( ground:spheres )
-                    & sceneLights       .~ fromList [ mainLight, spotLight01, spotLight02, spotLight03 ]
+                    & sceneLights       .~ fromList [ mainLight {--, spotLight01, spotLight02, spotLight03 --} ]
 
     where
     texDir  = "res"</>"tex"
@@ -87,7 +87,7 @@ pbrTestScene = proc () -> do
     spheresW   = proc _ -> do
         sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
         returnA -< generateOnGrid . (7, 7, V2 10 10,) $
-                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.dimgray
+                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.white
                            & entityScale //~ 2
 
 
@@ -116,25 +116,33 @@ pbrTestScene = proc () -> do
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        tex <- cubeTextureToTexture "SkyCube" <$> sequenceA (constTextureW <$> skyTex) -< ()
-        returnA -< skydome & materials.Mat.matTexture .~ tex
-                           & materials.Mat.matTexture
+        -- tex <- cubeTextureToTexture "SkyCube" <$> sequenceA (constTextureW <$> skyTex) -< ()
+        tex <- constTextureW skyTex -< ()
+        returnA -< skydome & materials.skyEnvironmentMap
+                                      .Mat.matTexture .~ tex
+                           & materials.skyRadianceMap
+                                      .Mat.matTexture .~ tex
+                           & materials.skyEnvironmentMap
+                                .Mat.matTexture
                                 .textureConfig
                                 .texConfWrapping
                                 .texWrapClamping      .~ GL.ClampToEdge
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
-    skyTex  =
-        let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
-            ext             = "jpg"
-            fileRes file    = mkTexture2D (fromString . fpToString $ file) <$> (imageRes $ envPath </> file <.> ext)
-        in Mat.Cube
-            { cubeFaceRight = fileRes "posx", cubeFaceLeft   = fileRes "negx"
-            , cubeFaceTop   = fileRes "posy", cubeFaceBottom = fileRes "negy"
-            , cubeFaceFront = fileRes "posz", cubeFaceBack   = fileRes "negz"
-            }
-        -- textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
+    skyTex        = mkTextureCubeMip "SeaCross" <$>
+                        cubeCrossMipsRes Strip (texDir</>"env"</>"Sea"</>"pmrem"</>"sea_m<->.png")
+                            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+    -- skyTex  =
+    --     let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
+    --         ext             = "jpg"
+    --         fileRes file    = mkTexture2D (fromString . fpToString $ file) <$> (imageRes $ envPath </> file <.> ext)
+    --     in Mat.Cube
+    --         { cubeFaceRight = fileRes "posx", cubeFaceLeft   = fileRes "negx"
+    --         , cubeFaceTop   = fileRes "posy", cubeFaceBottom = fileRes "negy"
+    --         , cubeFaceFront = fileRes "posz", cubeFaceBack   = fileRes "negz"
+    --         }
+    --     -- textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
 
     -- The Ground
     groundEntity :: SceneEntity
@@ -155,7 +163,7 @@ pbrTestScene = proc () -> do
         <&> normalMaterial.Mat.stpFactor   *~ 2.0
 
     -- lighting
-    mainLight   = makeDirectionalLight (V3 (-1) (-1) 0) (V3 1 0.953 0.918) 0.2
+    mainLight   = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 1.2
 
     spotLight01 = makeSpotlight ( V3 8 8 0 )
                                 ( V3 (-5) (-5) 0 )
@@ -179,7 +187,7 @@ generateOnGrid (xCnt, yCnt, V2 dimX dimY, template) =
     where
 
     generate ((xi, yi), pos) =
-        let roughValue  = 0.2 + xi / fromIntegral xCnt
+        let roughValue  = xi / fromIntegral xCnt
             newSphere   = template & entityPosition .~ pos
                                    & materials.roughnessMaterial.Mat.matColor .~ (realToFrac roughValue)
         in newSphere

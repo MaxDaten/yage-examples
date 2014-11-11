@@ -127,7 +127,8 @@ mainWire = proc () -> do
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
         tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
-        returnA -< skydome & materials.Mat.matTexture .~ tex
+        returnA -< skydome & materials.skyEnvironmentMap
+                                      .Mat.matTexture .~ tex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
 
