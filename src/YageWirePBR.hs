@@ -131,7 +131,7 @@ pbrTestScene = proc () -> do
                            & entityScale              .~ 50
 
     skyTex        = mkTextureCubeMip "SeaCross" <$>
-                        cubeCrossMipsRes Strip (texDir</>"env"</>"Sea"</>"pmrem"</>"sea_m<->.png")
+                        cubeCrossMipsRes Strip (texDir</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")
                             <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
     -- skyTex  =
     --     let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
@@ -163,7 +163,7 @@ pbrTestScene = proc () -> do
         <&> normalMaterial.Mat.stpFactor   *~ 2.0
 
     -- lighting
-    mainLight   = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 1.2
+    mainLight   = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
 
     spotLight01 = makeSpotlight ( V3 8 8 0 )
                                 ( V3 (-5) (-5) 0 )

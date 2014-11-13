@@ -94,12 +94,16 @@ mainWire = proc () -> do
     texDir      = "res" </> "tex"
 
     skyTex :: YageResource Texture
-    skyTex = pure $ mkTexture2D "SKYE" $ Mat.pxTexture Mat.TexSRGB8 Mat.black
+    skyTex = mkTextureCubeMip "SeaCross" <$>
+                cubeCrossMipsRes Strip (texDir</>"env"</>"grace"</>"pmrem"</>"*_m<->.png")
+                    <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
-        tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
+        tex <- constTextureW skyTex -< ()
         returnA -< skydome & materials.skyEnvironmentMap
+                                      .Mat.matTexture .~ tex
+                           & materials.skyRadianceMap
                                       .Mat.matTexture .~ tex
                            & entityPosition           .~ pos
                            & entityScale              .~ 50
@@ -143,10 +147,10 @@ mainWire = proc () -> do
     headMesh = meshRes $ loadYGM geoVertex ( "res" </> "model" </> "head.ygm", mkSelection [] )
 
     bloomSettings   = defaultBloomSettings
-                        & bloomFactor           .~ 1
-                        & bloomPreDownsampling  .~ 2
+                        & bloomFactor           .~ 2
+                        & bloomPreDownsampling  .~ 1
                         & bloomGaussPasses      .~ 7
-                        & bloomWidth            .~ 2
+                        & bloomWidth            .~ 1
                         & bloomThreshold        .~ 0.6
 
     camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,1000.0) )
