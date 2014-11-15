@@ -87,7 +87,7 @@ pbrTestScene = proc () -> do
     spheresW   = proc _ -> do
         sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
         returnA -< generateOnGrid . (10, 1, V2 10 1, 2, ) $
-                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.white
+                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.gold
                            & entityScale //~ 2
 
 

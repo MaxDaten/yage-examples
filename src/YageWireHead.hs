@@ -94,7 +94,7 @@ mainWire = proc () -> do
     texDir      = "res" </> "tex"
 
     skyTex :: YageResource Texture
-    skyTex = mkTextureCubeMip "SeaCross" <$>
+    skyTex = mkTextureCubeMip "Grace" <$>
                 cubeCrossMipsRes Strip (texDir</>"env"</>"grace"</>"pmrem"</>"*_m<->.png")
                     <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
 
