@@ -61,36 +61,33 @@ makeLenses ''SDFView
 
 
 main :: IO ()
-main = do
-    bitTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66.png"
-    sdfTexture <- loadTexture2D $ "res" </> "tex" </> "char" </> "char-66-sdf.png"
-    yageMain "yage-sdf" appConf winSettings (mainWire bitTexture sdfTexture) sdfRenderSystem (1/60)
+main = yageMain "yage-sdf" appConf winSettings (mainWire) sdfRenderSystem (1/60)
 
 
 
 sdfRenderSystem :: YageRenderSystem SDFView ()
 sdfRenderSystem viewport theView = do
     guiTex <- Pass.runGuiPass (theView^.background) viewport (theView^.gui)
-    Pass.runScreenPass viewport [ theView^.background, guiTex ]
+    Pass.screenPass viewport $ fromList [ theView^.background, guiTex ]
 
 
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => Texture -> Texture -> YageWire t () SDFView
-mainWire bitmap sdf =
-    let bgrColor = Mat.TexRGB8 `Mat.pxTexture` Mat.thistle
-        bgr      = Texture "Background" def $ Mat.Texture2D bgrColor
-        txtColor = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
-
+mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () SDFView
+mainWire =
+    let bgrColor  = Mat.TexRGB8 `Mat.pxTexture` Mat.thistle
+        bgr       = mkTexture2D "Background" bgrColor
+        txtColor  = Mat.linearV4 (Mat.opaque Mat.darkseagreen)
+        bitmapRes = mkTexture2D "char66" <$> (imageRes $ "res" </> "tex" </> "char" </> "char-66.png")
+        sdfRes    = mkTexture2D "char66-50p" <$> (imageRes $ "res" </> "tex" </> "char" </> "char-66-sdf-50perc.png")
     in proc _ -> do
         factor  <- whileKeyDown Key'A . arr (1.0+) . arr sin . arr (*0.5) . time <|> 1 -< ()
+        bitmapTex  <- constTextureW bitmapRes -< ()
+        sdfTex     <- constTextureW sdfRes -< ()
         let elemSize = factor *^ V2 400 400
-        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF"  ?~ guiImageSDF sdf txtColor 0 elemSize
-                                          & guiElements.at "BIT"  ?~ guiImage bitmap txtColor (V2 400 0) elemSize
-                                          & guiElements.at "SDFP" ?~ guiImage sdf    txtColor (V2 0 400) elemSize
+        returnA -< SDFView bgr $ emptyGUI & guiElements.at "SDF"  ?~ guiImageSDF sdfTex txtColor 0 elemSize
+                                          & guiElements.at "BIT"  ?~ guiImage bitmapTex txtColor (V2 400 0) elemSize
+                                          & guiElements.at "SDFP" ?~ guiImage sdfTex    txtColor (V2 0 400) elemSize
 
 
 
 instance LinearInterpolatable SDFView where
     lerp alpha u v = u & gui .~ lerp alpha (u^.gui) (v^.gui)
-
-instance HasResources GeoVertex SDFView SDFView where
-    requestResources = return

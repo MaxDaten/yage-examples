@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -18,8 +19,13 @@ import Yage.Wire hiding ((<>))
 import Yage.Camera
 import Yage.HDR
 import Yage.Scene
+import Yage.Texture
 import Yage.Transformation
+import Yage.Resources
+
 import Yage.Pipeline.Deferred
+import Yage.Pipeline.Deferred.GeometryPass
+
 import Yage.Examples.Shared
 import qualified Yage.Core.OpenGL as GL
 
@@ -29,167 +35,185 @@ import Yage.UI.GUI
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
 
+import Data.Traversable (sequenceA)
 
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (800, 600)
+    { windowSize = (1600, 1000)
     , windowHints =
         [ WindowHint'ContextVersionMajor  4
         , WindowHint'ContextVersionMinor  1
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
         , WindowHint'OpenGLForwardCompat  True
         , WindowHint'RefreshRate          60
-        --, WindowHint'Resizable            False
-        --, WindowHint'Decorated            False
+        -- , WindowHint'OpenGLDebugContext   True
+        -- , WindowHint'Resizable            False
+        -- , WindowHint'Decorated            False
         ]
      }
 
-data SphereView = SphereView
-    { _viewCamera     :: Camera
-    , _theSphere      :: !Sphere
-    }
-    deriving (Show)
-
-data Sphere = Sphere
-    { _spherePosition    :: !(V3 Float)
-    , _sphereOrientation :: !(Quaternion Float)
-    , _sphereScale       :: !(V3 Float)
-    }
-    deriving (Show)
-makeLenses ''Sphere
-
 
 main :: IO ()
-main = yageMain "yage-pbr" defaultAppConfig winSettings (simToRender <$> mainWire) yDeferredLighting (1/60)
-
-camStartPos :: V3 Float
-camStartPos = V3 0 1 3
-
-mouseSensitivity :: V2 Float
-mouseSensitivity = V2 0.1 0.1
-
-wasdControlled :: Real t => YageWire t () (V3 Float)
-wasdControlled = wasdMovement (V2 2 2)
-
-mouseControlled :: Real t => YageWire t () (V2 Float)
-mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
-
-cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
-
-
-mainWire :: (HasTime Float (YageTimedInputState t), Real t) => YageWire t () SphereView
-mainWire = proc () -> do
-    let initCamera = mkCameraFps (deg2rad 75) (0.1,1000.0) idTransformation
-
-    sphereRot    <- sphereRotationByInput   -< ()
-    camera       <- cameraControl           -< initCamera
-
-    returnA -< SphereView camera
-                    (Sphere 0 sphereRot 1)
-
-    where
-
-    sphereRotationByInput :: (Real t) => YageWire t a (Quaternion Float)
-    sphereRotationByInput =
-        let acc         = 20
-            att         = 0.87
-        in
-       smoothRotationByKey acc att ( yAxis ) Key'Right
-     . smoothRotationByKey acc att (-yAxis ) Key'Left
-     . smoothRotationByKey acc att ( xAxis ) Key'Up
-     . smoothRotationByKey acc att (-xAxis ) Key'Down
-     . 1
-
-
+main = yageMain "yage-pbr" defaultAppConfig winSettings pbrTestScene yDeferredLighting (1/60)
 
 -------------------------------------------------------------------------------
 -- View Definition
 
-type SceneEntity      = GeoEntityRes
-type SceneEnvironment = Environment LitEntityRes SkyEntityRes
+type SceneEntity      = GeoEntity
+type SceneEnvironment = Environment Light SkyEntity
+type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 
---instance HasScene SphereView GeoVertex LitVertex where
-simToRender :: SphereView -> Scene HDRCamera SceneEntity SceneEnvironment GUI
-simToRender SphereView{..} =
-    let sphereEntity    = ( basicEntity :: SceneEntity )
-                            & renderData        .~ Res.MeshFile ( "res" </> "model" </> "sphere.ygm", mkSelection [] ) Res.YGMFile
-                            & entityOrientation .~ (realToFrac <$> _theSphere^.sphereOrientation)
-                            & materials         .~ sphereMaterial
-        sphereMaterial  = defaultGeoMaterial
+pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Show t) => YageWire t () PBRScene
+pbrTestScene = proc () -> do
 
-        -- The Ground
-        groundEntity    = ( floorEntity :: SceneEntity )
-                            & materials         .~ groundMaterial
-                            & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
-                            & entityPosition    .~ V3 0 (-1) 0
-                            & entityScale       .~ V3 10 1 10
-        groundMaterial  = def & albedoMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_d.png" )
-                              & albedoMaterial.Mat.matTransformation.transScale *~ 2.0
-                              & normalMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_n.png" )
-                              & normalMaterial.Mat.matTransformation.transScale *~ 2.0
-                              & roughnessMaterial.Mat.singleMaterial .~ TextureFile ( "res" </> "tex" </> "floor_r.png" )
-                              & normalMaterial.Mat.matTransformation.transScale *~ 8.0
+    hdrCam <- hdrCamera -< ()
+    sky    <- skyDomeW  -< hdrCam^.hdrCameraHandle.cameraLocation
 
-        -- lighting
-        mainLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 64 )
-                            & mkLight
-                            & lightPosition .~ V3 0 15 10
-                            & lightRadius   .~ 50
-        secondLight     = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/1024) 1024 )
-                            & mkLight
-                            & lightPosition .~ V3 (-15) 15 (-10)
-                            & lightRadius   .~ 50
+    spheres <- spheresW -< ()
+    ground  <- overA materials groundMaterialW -< groundEntity
 
-        softLight       = Light Pointlight ( LightAttributes 1 (0, 0, 1.0/64) 16 )
-                            & mkLight
-                            & lightPosition .~ V3 10 15 (-10)
-                            & lightRadius   .~ 50
+    returnA -< emptyScene hdrCam emptyGUI
+                    & sceneSky          ?~ sky
+                    & sceneEntities     .~ fromList ( ground:spheres )
+                    & sceneLights       .~ fromList [ mainLight {--, spotLight01, spotLight02, spotLight03 --} ]
+
+    where
+    texDir  = "res"</>"tex"
+
+    sphereMesh = meshRes $ loadYGM geoVertex ("res" </> "model" </> "sphere.ygm", mempty)
+
+    spheresW   = proc _ -> do
+        sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
+        returnA -< generateOnGrid . (10, 1, V2 10 1, 2, ) $
+                    sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.gold
+                           & entityScale //~ 2
 
 
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "small"
-        --envPath         = "res" </> "tex" </> "env" </> "RomeChurch" </> "big"
-        envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
-        ext             = "jpg"
-        cubeMapFile file= envPath </> file <.> ext
+    hdrCamera =
+        let initCamera = mkCameraFps (deg2rad 75) (0.1,100.0)
+        in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
-        --skyCubeMap      = Res.TextureFile <$> pure ("res" </> "tex" </> "misc" </> "blueprint" </> "Seamless Blueprint Textures" </> "1.png")
-        --skyCubeMap      = Res.TextureFile <$> pure (cubeMapFile "posx")
+    hdrController =
+         hdrExposure      <~~ ( spin (-10, 10) 2.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
+                                                       ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
 
-        skyCubeMap      = Mat.mkMaterialF ( Mat.opaque Mat.white ) $ Res.TextureFile <$> Mat.Cube
-                            { cubeFaceRight = cubeMapFile "posx", cubeFaceLeft   = cubeMapFile "negx"
-                            , cubeFaceTop   = cubeMapFile "posy", cubeFaceBottom = cubeMapFile "negy"
-                            , cubeFaceFront = cubeMapFile "posz", cubeFaceBack   = cubeMapFile "negz"
-                            }
+         hdrExposureBias  <~~ ( spin (-10, 10) 0.0 <<< (( 0.01 <$) <$> keyJustPressed Key'M)       &&&
+                                                       ((-0.01 <$) <$> keyJustPressed Key'N) )     >>>
+         hdrWhitePoint    <~~ pure 11.2       >>>
+         hdrBloomSettings <~~ pure bloomSettings
 
-        sky             = skydome skyCubeMap
-                            & entityPosition        .~ _viewCamera^.cameraLocation
-                            & entityScale           .~ 100
-                            & materials
-                                .Mat.matConfig
+
+    bloomSettings =
+        defaultBloomSettings
+            & bloomFactor           .~ 0.7
+            & bloomPreDownsampling  .~ 1
+            & bloomGaussPasses      .~ 5
+            & bloomWidth            .~ 1
+            & bloomThreshold        .~ 0.5
+
+
+    skyDomeW :: YageWire t (V3 Double) SkyEntity
+    skyDomeW = proc pos -> do
+        -- tex <- cubeTextureToTexture "SkyCube" <$> sequenceA (constTextureW <$> skyTex) -< ()
+        tex <- constTextureW skyTex -< ()
+        returnA -< skydome & materials.skyEnvironmentMap
+                                      .Mat.matTexture .~ tex
+                           & materials.skyRadianceMap
+                                      .Mat.matTexture .~ tex
+                           & materials.skyEnvironmentMap
+                                .Mat.matTexture
+                                .textureConfig
                                 .texConfWrapping
-                                .texWrapClamping    .~ GL.ClampToEdge
+                                .texWrapClamping      .~ GL.ClampToEdge
+                           & entityPosition           .~ pos
+                           & entityScale              .~ 50
 
-        bloomSettings   = defaultBloomSettings
-                            & bloomFactor           .~ 0.3
-                            & bloomPreDownsampling  .~ 4
-                            & bloomGaussPasses      .~ 3
+    skyTex        = mkTextureCubeMip "SeaCross" <$>
+                        cubeCrossMipsRes Strip (texDir</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")
+                            <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+    -- skyTex  =
+    --     let envPath         = "res" </> "tex" </> "env" </> "Sea" </> "small"
+    --         ext             = "jpg"
+    --         fileRes file    = mkTexture2D (fromString . fpToString $ file) <$> (imageRes $ envPath </> file <.> ext)
+    --     in Mat.Cube
+    --         { cubeFaceRight = fileRes "posx", cubeFaceLeft   = fileRes "negx"
+    --         , cubeFaceTop   = fileRes "posy", cubeFaceBottom = fileRes "negy"
+    --         , cubeFaceFront = fileRes "posz", cubeFaceBack   = fileRes "negz"
+    --         }
+    --     -- textureResource $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
 
-        camera          = defaultHDRCamera _viewCamera
-                            & hdrExposure           .~ 0.5
-                            & hdrExposureBias       .~ 0.0
-                            & hdrWhitePoint         .~ 0.5
-                            & hdrBloomSettings      .~ bloomSettings
+    -- The Ground
+    groundEntity :: SceneEntity
+    groundEntity =
+        ( floorEntity :: SceneEntity )
+            -- & materials         .~ groundMaterial
+            & drawSettings      .~ GLDrawSettings GL.Triangles (Just GL.Back)
+            & entityPosition    .~ V3 0 (-0.75) 0
+            & entityScale       .~ V3 13 1 13
 
-        theScene        = emptyScene camera emptyGUI
-                            & sceneSky ?~ sky
-                            & sceneEnvironment.envAmbient .~ AmbientLight 0
-    in theScene
-        `addEntity` sphereEntity
-        `addEntity` groundEntity
-        `addLight` mainLight
-        `addLight` secondLight
-        `addLight` softLight
+    groundMaterialW :: YageWire t GeoMaterial GeoMaterial
+    groundMaterialW =
+          ( albedoMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorD" <$> (imageRes $ "res" </> "tex" </> "floor_d.png") )
+        >>> normalMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorN" <$> (imageRes $ "res" </> "tex" </> "floor_n.png") )
+        >>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( mkTexture2D "FloorR" <$> (imageRes $ "res" </> "tex" </> "floor_r.png") ))
+        <&> albedoMaterial.Mat.stpFactor   *~ 4.0
+        <&> normalMaterial.Mat.stpFactor   *~ 2.0
+        <&> normalMaterial.Mat.stpFactor   *~ 2.0
+
+    -- lighting
+    mainLight   = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
+
+    spotLight01 = makeSpotlight ( V3 8 8 0 )
+                                ( V3 (-5) (-5) 0 )
+                                50 60
+                                ( V3 1 0 0 ) 2
+
+    spotLight02 = makeSpotlight ( V3 (-8) 8 0 )
+                                ( V3 5 (-5) 0 )
+                                50 60
+                                ( V3 0 1 0 ) 1
+
+    spotLight03 = makeSpotlight ( V3 0 8 8 )
+                                ( V3 0 (-5) (-5) )
+                                50 60
+                                ( V3 0.1 0.1 1 ) 1
+
+generateOnGrid :: (Int, Int, V2 Double, Double, SceneEntity) -> [SceneEntity]
+generateOnGrid (xCnt, yCnt, V2 dimX dimY, scale, template) =
+    map generate (gridIdx `zip` positions)
+
+    where
+
+    generate ((xi, yi), pos) =
+        let roughValue  = xi / fromIntegral (xCnt-1)
+            newSphere   = template & entityPosition .~ pos
+                                   & materials.roughnessMaterial.Mat.matColor .~ (realToFrac roughValue)
+        in newSphere
+
+    positions   = map calculatePosition gridIdx
+    gridIdx     = [ (fromIntegral xi, fromIntegral yi) | xi <- [0 .. xCnt-1], yi <- [0 .. yCnt-1] ]
+    startPoint  = (step + V3 (-dimX) 0 (dimY)) ^* 0.5
+    step        = 0 & _x .~  dimX / fromIntegral xCnt
+                    & _z .~ -dimY / fromIntegral yCnt
+    calculatePosition (xi, yi) =  startPoint + V3 xi 0 yi * step
+
+
+-- controller wires
+
+camStartPos :: V3 Double
+camStartPos = V3 0 1 5
+
+mouseSensitivity :: V2 Double
+mouseSensitivity = V2 0.1 0.1
+
+wasdControlled :: Real t => YageWire t () (V3 Double)
+wasdControlled = wasdMovement (V2 2 2)
+
+mouseControlled :: Real t => YageWire t () (V2 Double)
+mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
+
+cameraControl :: Real t => YageWire t Camera Camera
+cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 

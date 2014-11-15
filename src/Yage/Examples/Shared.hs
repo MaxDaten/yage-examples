@@ -59,23 +59,20 @@ vertexFormat = internalFormat
 
 buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo vertexFormat pos tex
 
-boxEntity :: (Default mat) => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat
+boxEntity :: (Default mat) => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat
 boxEntity =
-    let cubeMesh = buildMeshUV "box" (cubePos 1) (cubeSingleUV)
-    in ( basicEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat )
-            & renderData .~ MeshPure cubeMesh
+    ( basicEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat )
+        & renderData .~ buildMeshUV "box" (cubePos 1) (cubeSingleUV)
 
 
-floorEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat
+floorEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat
 floorEntity =
-    let gridMesh = buildMeshUV "floor" (gridPos 1 1) (gridUV 1)
-    in ( basicEntity :: Default mat => Entity (MeshResource (Vertex (Y'P3TX2TN GLfloat))) mat )
-            & renderData .~ ( MeshPure gridMesh )
+    ( basicEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat )
+        & renderData .~ buildMeshUV "floor" (gridPos 1 1) (gridUV 1)
 
 
-skydome :: FMaterial Cube MaterialColorAlpha TextureResource -> SkyEntityRes
-skydome cubeTex =
-    ( basicEntity :: Entity (MeshResource (Vertex (Y'P3 GLfloat))) (FMaterial Cube MaterialColorAlpha TextureResource) ) -- we have to fix the functor type
-        & materials  .~ cubeTex
+skydome :: SkyEntity
+skydome =
+    ( basicEntity :: SkyEntity )
         & renderData .~ (mkFromVerticesF "SkyDome" $ map (position3 =:) . vertices . triangles $ geoSphere 2 1)
 
