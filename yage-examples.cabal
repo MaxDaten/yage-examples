@@ -34,7 +34,7 @@ executable yage-cube
     other-modules:        Yage.Examples.Shared
 
     ghc-options:          -j8 -O -threaded -rtsopts -with-rtsopts=-N
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
 
     default-extensions:   NoImplicitPrelude
@@ -64,7 +64,7 @@ executable yage-head
 
     
     ghc-options:          -j8 -O -threaded -rtsopts -with-rtsopts=-N
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
 
     default-extensions:   NoImplicitPrelude
@@ -93,7 +93,7 @@ executable yage-material
     other-modules:        Yage.Examples.Shared
 
     ghc-options:          -j8 -O -threaded -rtsopts -with-rtsopts=-N
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
 
 
@@ -123,12 +123,12 @@ executable yage-pbr
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:         -threaded -O
+    ghc-options:         -threaded -O -with-rtsopts=-N
 
     if flag(dev)
         ghc-options:      -rtsopts
 
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
@@ -156,7 +156,7 @@ executable yage-sponza
     other-modules:        Yage.Examples.Shared
 
     ghc-options:          -j8 -O -threaded -rtsopts -with-rtsopts=-N
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
 
     default-extensions:   NoImplicitPrelude
@@ -232,12 +232,12 @@ executable yage-cube-map
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:         -threaded -O
+    ghc-options:         -threaded -O -with-rtsopts=-N
 
     if flag(dev)
         ghc-options:      -rtsopts
 
-    ghc-prof-options:     -w -prof
+    ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
     default-extensions:   NoImplicitPrelude
                           Arrows
