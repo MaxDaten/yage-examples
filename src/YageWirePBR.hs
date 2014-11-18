@@ -65,7 +65,7 @@ type SceneEnvironment = Environment Light SkyEntity
 type PBRScene         = Scene HDRCamera SceneEntity SceneEnvironment GUI
 
 
-pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Show t) => YageWire t () PBRScene
+pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
 
     hdrCam <- hdrCamera -< ()
@@ -85,10 +85,19 @@ pbrTestScene = proc () -> do
     sphereMesh = meshRes $ loadYGM geoVertex ("res" </> "model" </> "sphere.ygm", mempty)
 
     spheresW   = proc _ -> do
-        sphere <- pure ( basicEntity :: SceneEntity ) >>> ( renderData <~~ constMeshW sphereMesh ) -< ()
+        sphere <- ( pure ( basicEntity :: SceneEntity )
+                >>> renderData <~~ constMeshW sphereMesh
+                >>> materials.roughnessMaterial.Mat.matTexture <~~ constTextureW ( mkTexture2D "SphereR" <$> (imageRes $ "res" </> "tex" </> "noise_r.png") )
+                >>> materials.normalMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "SphereN" <$> (imageRes $ "res" </> "tex" </> "noise_t.png") )
+                )
+                <&> materials.roughnessMaterial.Mat.stpFactor   *~ 2
+                <&> materials.normalMaterial.Mat.stpFactor      *~ 2
+                -< ()
+        -- r <- arr sin . time -< ()
         returnA -< generateOnGrid . (10, 1, V2 10 1, 2, ) $
                     sphere & materials.albedoMaterial.Mat.matColor .~ Mat.opaque Mat.gold
                            & entityScale //~ 2
+                           -- & entityOrientation .~ axisAngle (normalize $ V3 1 1 1) (realToFrac r * 4 * pi)
 
 
     hdrCamera =
@@ -96,7 +105,7 @@ pbrTestScene = proc () -> do
         in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
     hdrController =
-         hdrExposure      <~~ ( spin (-10, 10) 2.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
+         hdrExposure      <~~ ( spin (0, 10) 1.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
                                                        ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
 
          hdrExposureBias  <~~ ( spin (-10, 10) 0.0 <<< (( 0.01 <$) <$> keyJustPressed Key'M)       &&&
@@ -157,10 +166,10 @@ pbrTestScene = proc () -> do
     groundMaterialW =
           ( albedoMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorD" <$> (imageRes $ "res" </> "tex" </> "floor_d.png") )
         >>> normalMaterial.Mat.matTexture    <~~ constTextureW ( mkTexture2D "FloorN" <$> (imageRes $ "res" </> "tex" </> "floor_n.png") )
-        >>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( mkTexture2D "FloorR" <$> (imageRes $ "res" </> "tex" </> "floor_r.png") ))
+        {-->>> roughnessMaterial.Mat.matTexture <~~ constTextureW ( mkTexture2D "FloorR" <$> (imageRes $ "res" </> "tex" </> "floor_r.png") )--})
         <&> albedoMaterial.Mat.stpFactor   *~ 4.0
-        <&> normalMaterial.Mat.stpFactor   *~ 2.0
-        <&> normalMaterial.Mat.stpFactor   *~ 2.0
+        <&> normalMaterial.Mat.stpFactor   *~ 4.0
+        <&> roughnessMaterial.Mat.stpFactor   *~ 2.0
 
     -- lighting
     mainLight   = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
