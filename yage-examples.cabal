@@ -43,16 +43,15 @@ executable yage-cube
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            == 4.3.*
-                        , linear          == 1.10.*
+                        , lens            >= 4.6
+                        , linear          >= 1.15
 
 -------------------------------------------------------------------------------
 
@@ -73,16 +72,15 @@ executable yage-head
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            == 4.3.*
-                        , linear          >= 1.3
+                        , lens            >= 4.6
+                        , linear          >= 1.15
 
 -------------------------------------------------------------------------------
 
@@ -104,16 +102,15 @@ executable yage-material
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            == 4.3.*
-                        , linear          >= 1.3
+                        , lens            >= 4.6
+                        , linear          >= 1.15
 
 -------------------------------------------------------------------------------
 
@@ -136,16 +133,15 @@ executable yage-pbr
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , text            >= 0.11
                         , netwire         == 5.0.0
-                        , lens            >= 3
-                        , linear          >= 1.3
+                        , lens            >= 4.6
+                        , linear          >= 1.15
 
 -------------------------------------------------------------------------------
 
@@ -165,10 +161,9 @@ executable yage-sponza
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
@@ -191,10 +186,9 @@ executable yage-sdf
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
@@ -217,10 +211,9 @@ executable yage-font-sdf
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
@@ -245,10 +238,9 @@ executable yage-cube-map
     default-language:     Haskell2010
 
     build-depends:        base            <  5
-                        , yage            == 0.4.3.0
-                        , yage-contrib    == 0.0.2.0
+                        , yage            == 0.5.0.0
+                        , yage-contrib    == 0.1.0.0
                         , yage-core       == 0.0.2.0
-                        , yage-rendering  == 0.0.6.0
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
