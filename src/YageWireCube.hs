@@ -24,37 +24,54 @@ import Yage.UI.GUI
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import qualified Yage.Material  as Mat
-import Yage.Pipeline.Deferred
+import Yage.Rendering.Resources.GL
+import Yage.Rendering.Pipeline.Deferred
+import Yage.Formats.Ygm
 import Yage.Examples.Shared
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (1200, 800)
-    , windowHints =
-        [ WindowHint'ContextVersionMajor  4
-        , WindowHint'ContextVersionMinor  1
-        , WindowHint'OpenGLProfile        OpenGLProfile'Core
-        , WindowHint'OpenGLForwardCompat  True
-        , WindowHint'RefreshRate          60
-        --, WindowHint'Resizable            False
-        --, WindowHint'Decorated            False
-        ]
-     }
+  { windowSize = (1200, 800)
+  , windowHints =
+    [ WindowHint'ContextVersionMajor  4
+    , WindowHint'ContextVersionMinor  1
+    , WindowHint'OpenGLProfile        OpenGLProfile'Core
+    , WindowHint'OpenGLForwardCompat  True
+    , WindowHint'RefreshRate          60
+    --, WindowHint'Resizable            False
+    --, WindowHint'Decorated            False
+    ]
+  }
 
+data Configuration = Configuration
+  { _mainAppConfig      :: ApplicationConfig
+  , _mainWindowConfig   :: WindowConfig
+  , _mainMonitorOptions :: MonitorOptions
+  }
+
+makeLenses ''Configuration
 
 appConf :: ApplicationConfig
 appConf = defaultAppConfig{ logPriority = WARNING }
 
+configuration :: Configuration
+configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
-main :: IO ()
-main = yageMain "yage-cube" appConf winSettings mainWire yDeferredLighting (1/60)
+type SceneEnvironment = Environment () ()
+type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) GBaseMaterial
+data CubeScene = CubeScene
+  { _cubeScene        :: Scene HDRCamera CubeEntity SceneEnvironment GUI
+  , _cubeMainViewport :: Viewport Int
+  , _cubeSceneRenderer :: RenderSystem CubeScene ()
+  }
 
-
-type SceneEnvironment = Environment Light SkyEntity
-
-type CubeScene = Scene HDRCamera GeoEntity SceneEnvironment GUI
+makeLenses ''CubeScene
 
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
+mainWire = undefined
+{--
+
+
 mainWire = proc _ -> do
 
     cam    <- overA hdrCameraHandle cameraControl -< camera
@@ -141,3 +158,26 @@ cubeRotationByInput =
  . smoothRotationByKey acc att ( xAxis ) Key'Up
  . smoothRotationByKey acc att (-xAxis ) Key'Down
  . 1
+--}
+
+main :: IO ()
+main = yageMain "yage-cube" configuration mainWire (1/60)
+
+instance HasMonitorOptions Configuration where
+  monitorOptions = mainMonitorOptions
+
+instance HasWindowConfig Configuration where
+  windowConfig = mainWindowConfig
+
+instance HasApplicationConfig Configuration where
+  applicationConfig = mainAppConfig
+
+instance HasViewport CubeScene Int where
+  viewport = cubeMainViewport
+
+instance HasRenderSystem CubeScene (ResourceT IO) CubeScene () where
+  renderSystem = cubeSceneRenderer
+
+instance LinearInterpolatable CubeScene where
+  lerp _ _ = id
+

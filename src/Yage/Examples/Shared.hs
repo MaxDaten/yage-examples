@@ -9,15 +9,13 @@ module Yage.Examples.Shared
 import Yage.Prelude hiding (concatMap)
 import Yage.Lens
 
-import Yage.Rendering
 import Yage.Scene
 import Yage.Material
 import Yage.Font
-import "yage" Yage.Geometry
 import Yage.Geometry3D hiding (Cube)
 import Yage.Formats.Ygm
 
-import Yage.Pipeline.Deferred
+import Yage.Rendering.Pipeline.Deferred
 
 ---------------------------------------------------------------------------------------------------
 -- Entity Definitions
@@ -53,7 +51,6 @@ pyramidEntity =
         , _transformation = idTransformation
         }
 
---}
 vertexFormat :: Pos GLfloat -> Tex GLfloat -> TBN GLfloat -> Vertex (Y'P3TX2TN GLfloat)
 vertexFormat = internalFormat
 
@@ -75,4 +72,5 @@ skydome :: SkyEntity
 skydome =
     ( basicEntity :: SkyEntity )
         & renderData .~ (mkFromVerticesF "SkyDome" $ map (position3 =:) . vertices . triangles $ geoSphere 2 1)
+--}
 
