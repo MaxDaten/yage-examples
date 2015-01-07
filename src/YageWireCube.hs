@@ -13,17 +13,17 @@ import Data.Traversable (sequenceA)
 
 import Yage
 import Yage.Lens hiding ((<.>))
-import Yage.Math
+import Yage.Math hiding (normal)
 import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
 import Yage.HDR
 import Yage.Texture
-import Yage.UI.GUI
+import Yage.UI.GUI hiding (Texture)
 import Yage.Transformation
 import qualified Yage.Resources as Res
-import qualified Yage.Material  as Mat
+import Yage.Material as Mat
 import Yage.Rendering.Resources.GL
 import Yage.Rendering.Pipeline.Deferred
 import Yage.Formats.Ygm
@@ -58,7 +58,7 @@ configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
 -- type SceneEnvironment = Environment () ()
-type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) GBaseMaterial
+type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) (GBaseMaterial Texture)
 data CubeScene = CubeScene
   { _cubeScene          :: DeferredScene CubeEntity () ()
   , _cubeMainViewport   :: Viewport Int
@@ -77,42 +77,50 @@ mainWire = proc () -> do
 sceneWire :: Real t => YageWire t () (DeferredScene CubeEntity () ())
 sceneWire = proc () -> do
   cam    <- overA hdrCameraHandle cameraControl -< initCamera
-  -- cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
+  cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
   returnA -< Scene
-    { _sceneEntities    = fromList [ ]
+    { _sceneEntities    = fromList [ cubeEntity ]
     , _sceneEnvironment = ()
     , _sceneCamera      =  cam
     , _sceneGui         = ()
     }
 
-
 cubeEntityW :: YageWire t b CubeEntity
-cubeEntityW = undefined
+cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
+ where
+  cube :: YageResource CubeEntity
+  cube = Entity <$> (fromMesh =<< cubeMesh) <*> cubeMaterial <*> pure idTransformation
+  cubeMaterial :: YageResource (GBaseMaterial Texture)
+  cubeMaterial = do
+    albedoTex <- texture2DRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
+    normalTex <- texture2DRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
+    gBaseMaterialRes defaultGBaseMaterial
+      <&> albedo.materialTexture  .~ albedoTex
+      <&> normal.stpFactor        .~ 2.0
+      <&> normal.materialTexture  .~ normalTex
+      <&> normal.stpFactor        .~ 2.0
+  cubeMesh :: YageResource (Mesh YGMVertex)
+  cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
 
-bloomSettings =
-  defaultBloomSettings
-    & bloomFactor           .~ 0.7
-    & bloomPreDownsampling  .~ 2
-    & bloomGaussPasses      .~ 5
-    & bloomWidth            .~ 2
-    & bloomThreshold        .~ 0.5
+bloomSettings = defaultBloomSettings
+  & bloomFactor           .~ 0.7
+  & bloomPreDownsampling  .~ 2
+  & bloomGaussPasses      .~ 5
+  & bloomWidth            .~ 2
+  & bloomThreshold        .~ 0.5
 
-initCamera =
-  defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
-    & hdrExposure           .~ 2
-    & hdrExposureBias       .~ 0.0
-    & hdrWhitePoint         .~ 11.2
-    & hdrBloomSettings      .~ bloomSettings
+initCamera = defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
+  & hdrExposure           .~ 2
+  & hdrExposureBias       .~ 0.0
+  & hdrWhitePoint         .~ 11.2
+  & hdrBloomSettings      .~ bloomSettings
 
 {--
 
 
 mainWire = proc _ -> do
 
-    cam    <- overA hdrCameraHandle cameraControl -< camera
     sky    <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
-
-    boxEntity <- boxEntityW >>> (entityOrientation <~~ cubeRotationByInput) -< ()
 
     returnA -< emptyScene cam emptyGUI
                 & sceneSky      ?~ sky
@@ -128,23 +136,6 @@ mainWire = proc _ -> do
                     , _lightIntensity = 50
                     }
 
-
-    boxEntityW :: YageWire t b GeoEntity
-    boxEntityW =
-        let albedoTex = mkTexture2D "FloorD" <$> (imageRes $ texDir</>"floor_d"<.>"png")
-            normalTex = mkTexture2D "FloorN" <$> (imageRes $ texDir</>"floor_n"<.>"png")
-        in (pure (basicEntity :: GeoEntity)
-                >>> renderData <~~ constMeshW boxMesh
-                >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
-                >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW normalTex)
-                <&> materials.albedoMaterial.Mat.stpFactor .~ 2.0
-                <&> materials.normalMaterial.Mat.stpFactor .~ 2.0
-                <&> entityScale //~ 2
-
-
-    boxMesh :: YageResource (Mesh GeoVertex)
-    boxMesh = meshRes $ loadYGM geoVertex ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
-
     skyDomeW :: YageWire t (V3 Double) SkyEntity
     skyDomeW = proc pos -> do
         tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
@@ -155,18 +146,6 @@ mainWire = proc _ -> do
 
     skyTex  = mkTexture2D "SkyBlueprint" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
 
-    bloomSettings   = defaultBloomSettings
-                        & bloomFactor           .~ 0.7
-                        & bloomPreDownsampling  .~ 2
-                        & bloomGaussPasses      .~ 5
-                        & bloomWidth            .~ 2
-                        & bloomThreshold        .~ 0.5
-
-    camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,10000) )
-                        & hdrExposure           .~ 2
-                        & hdrExposureBias       .~ 0.0
-                        & hdrWhitePoint         .~ 11.2
-                        & hdrBloomSettings      .~ bloomSettings
 
 --}
 camStartPos :: V3 Double
