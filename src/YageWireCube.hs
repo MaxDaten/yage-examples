@@ -57,18 +57,53 @@ appConf = defaultAppConfig{ logPriority = WARNING }
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
-type SceneEnvironment = Environment () ()
+-- type SceneEnvironment = Environment () ()
 type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) GBaseMaterial
 data CubeScene = CubeScene
-  { _cubeScene        :: Scene HDRCamera CubeEntity SceneEnvironment GUI
-  , _cubeMainViewport :: Viewport Int
-  , _cubeSceneRenderer :: RenderSystem CubeScene ()
+  { _cubeScene          :: DeferredScene CubeEntity () ()
+  , _cubeMainViewport   :: Viewport Int
+  , _cubeSceneRenderer  :: RenderSystem CubeScene ()
   }
 
 makeLenses ''CubeScene
 
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
-mainWire = undefined
+mainWire = proc () -> do
+  pipeline <- acquireOnce yDeferredLighting -< ()
+  scene    <- sceneWire -< ()
+  returnA -< CubeScene scene (defaultViewport 1200 800) pipeline
+
+
+sceneWire :: Real t => YageWire t () (DeferredScene CubeEntity () ())
+sceneWire = proc () -> do
+  cam    <- overA hdrCameraHandle cameraControl -< initCamera
+  -- cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
+  returnA -< Scene
+    { _sceneEntities    = fromList [ ]
+    , _sceneEnvironment = ()
+    , _sceneCamera      =  cam
+    , _sceneGui         = ()
+    }
+
+
+cubeEntityW :: YageWire t b CubeEntity
+cubeEntityW = undefined
+
+bloomSettings =
+  defaultBloomSettings
+    & bloomFactor           .~ 0.7
+    & bloomPreDownsampling  .~ 2
+    & bloomGaussPasses      .~ 5
+    & bloomWidth            .~ 2
+    & bloomThreshold        .~ 0.5
+
+initCamera =
+  defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
+    & hdrExposure           .~ 2
+    & hdrExposureBias       .~ 0.0
+    & hdrWhitePoint         .~ 11.2
+    & hdrBloomSettings      .~ bloomSettings
+
 {--
 
 
@@ -133,6 +168,7 @@ mainWire = proc _ -> do
                         & hdrWhitePoint         .~ 11.2
                         & hdrBloomSettings      .~ bloomSettings
 
+--}
 camStartPos :: V3 Double
 camStartPos = V3 0 0 2
 
@@ -158,7 +194,6 @@ cubeRotationByInput =
  . smoothRotationByKey acc att ( xAxis ) Key'Up
  . smoothRotationByKey acc att (-xAxis ) Key'Down
  . 1
---}
 
 main :: IO ()
 main = yageMain "yage-cube" configuration mainWire (1/60)
@@ -177,6 +212,9 @@ instance HasViewport CubeScene Int where
 
 instance HasRenderSystem CubeScene (ResourceT IO) CubeScene () where
   renderSystem = cubeSceneRenderer
+
+instance HasDeferredScene CubeScene CubeEntity () () where
+  deferredScene = cubeScene
 
 instance LinearInterpolatable CubeScene where
   lerp _ _ = id
