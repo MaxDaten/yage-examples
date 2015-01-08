@@ -60,8 +60,9 @@ configuration = Configuration appConf winSettings (MonitorOptions "localhost" 80
 -- type SceneEnvironment = Environment () ()
 type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) (GBaseMaterial Texture)
 data CubeScene = CubeScene
-  { _cubeScene          :: DeferredScene CubeEntity () ()
+  { _cubeScene          :: DeferredScene
   , _cubeMainViewport   :: Viewport Int
+  , _cubeCamera         :: HDRCamera
   , _cubeSceneRenderer  :: RenderSystem CubeScene ()
   }
 
@@ -71,18 +72,16 @@ mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () Cu
 mainWire = proc () -> do
   pipeline <- acquireOnce yDeferredLighting -< ()
   scene    <- sceneWire -< ()
-  returnA -< CubeScene scene (defaultViewport 1200 800) pipeline
+  cam      <- overA hdrCameraHandle cameraControl -< initCamera
+  returnA -< CubeScene scene (defaultViewport 1200 800) cam pipeline
 
 
-sceneWire :: Real t => YageWire t () (DeferredScene CubeEntity () ())
+sceneWire :: Real t => YageWire t () DeferredScene
 sceneWire = proc () -> do
-  cam    <- overA hdrCameraHandle cameraControl -< initCamera
   cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
   returnA -< Scene
     { _sceneEntities    = fromList [ cubeEntity ]
-    , _sceneEnvironment = ()
-    , _sceneCamera      =  cam
-    , _sceneGui         = ()
+    , _sceneEnvironment = emptyEnvironment
     }
 
 cubeEntityW :: YageWire t b CubeEntity
@@ -192,8 +191,14 @@ instance HasViewport CubeScene Int where
 instance HasRenderSystem CubeScene (ResourceT IO) CubeScene () where
   renderSystem = cubeSceneRenderer
 
-instance HasDeferredScene CubeScene CubeEntity () () where
-  deferredScene = cubeScene
+instance HasScene CubeScene DeferredEntity DeferredEnvironment where
+  scene = cubeScene
+
+instance HasCamera CubeScene where
+  camera = cubeCamera.camera
+
+instance HasEntities CubeScene (Seq CubeEntity) where
+  entities = cubeScene.entities
 
 instance LinearInterpolatable CubeScene where
   lerp _ _ = id
