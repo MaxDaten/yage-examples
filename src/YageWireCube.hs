@@ -1,11 +1,11 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Main where
 
@@ -18,14 +18,15 @@ import Yage.Wire hiding ((<>))
 
 import Yage.Camera
 import Yage.Scene
+import qualified Yage.Vertex as V
 import Yage.HDR
-import Yage.Texture
 import Yage.UI.GUI hiding (Texture)
 import Yage.Transformation
 import qualified Yage.Resources as Res
 import Yage.Material as Mat
 import Yage.Rendering.Resources.GL
 import Yage.Rendering.Pipeline.Deferred
+import Yage.Rendering.Pipeline.Deferred.SkyPass
 import Yage.Formats.Ygm
 import Yage.Examples.Shared
 
@@ -71,17 +72,18 @@ makeLenses ''CubeScene
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
 mainWire = proc () -> do
   pipeline <- acquireOnce yDeferredLighting -< ()
-  scene    <- sceneWire -< ()
   cam      <- overA hdrCameraHandle cameraControl -< initCamera
+  scene    <- sceneWire -< cam^.camera
   returnA -< CubeScene scene (defaultViewport 1200 800) cam pipeline
 
 
-sceneWire :: Real t => YageWire t () DeferredScene
-sceneWire = proc () -> do
+sceneWire :: Real t => YageWire t Camera DeferredScene
+sceneWire = proc cam -> do
   cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
+  skyDome    <- skyDomeW -< cam^.position
   returnA -< Scene
     { _sceneEntities    = fromList [ cubeEntity ]
-    , _sceneEnvironment = emptyEnvironment
+    , _sceneEnvironment = emptyEnvironment & sky ?~ skyDome
     }
 
 cubeEntityW :: YageWire t b CubeEntity
@@ -91,8 +93,8 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
   cube = Entity <$> (fromMesh =<< cubeMesh) <*> cubeMaterial <*> pure idTransformation
   cubeMaterial :: YageResource (GBaseMaterial Texture)
   cubeMaterial = do
-    albedoTex <- texture2DRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
-    normalTex <- texture2DRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
+    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
+    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture  .~ albedoTex
       <&> normal.stpFactor        .~ 2.0
@@ -100,6 +102,32 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
       <&> normal.stpFactor        .~ 2.0
   cubeMesh :: YageResource (Mesh YGMVertex)
   cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
+
+skyDomeW :: YageWire t (V3 Double) DeferredSky
+skyDomeW = proc pos -> do
+  s <- acquireOnce skyEntity -< ()
+  returnA -< s & transformation.scale     .~ 50
+               & transformation.position  .~ pos
+ where
+  skyEntity :: YageResource DeferredSky
+  skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
+  skyMaterial :: YageResource (SkyMaterial Texture)
+  skyMaterial = do
+    let mat = SkyMaterial <$> materialRes defaultMaterialSRGB <*> materialRes defaultMaterialSRGB
+        cubemapRes :: YageResource (Cubemap DynamicImage)
+        cubemapRes = pure <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
+    envMap <- textureRes =<< cubemapRes
+    mat <&> environmentMap.materialTexture .~ envMap
+
+  -- tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
+  -- returnA -< skydome
+  --   & materials.skyEnvironmentMap.Mat.matTexture .~ tex
+  --   & entityPosition           .~ pos
+  --   & entityScale              .~ 50
+
+
+-- skyTex  = mkTexture2D "SkyBlueprint" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
+
 
 bloomSettings = defaultBloomSettings
   & bloomFactor           .~ 0.7
@@ -135,15 +163,6 @@ mainWire = proc _ -> do
                     , _lightIntensity = 50
                     }
 
-    skyDomeW :: YageWire t (V3 Double) SkyEntity
-    skyDomeW = proc pos -> do
-        tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
-        returnA -< skydome & materials.skyEnvironmentMap
-                                      .Mat.matTexture .~ tex
-                           & entityPosition           .~ pos
-                           & entityScale              .~ 50
-
-    skyTex  = mkTexture2D "SkyBlueprint" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
 
 
 --}
@@ -151,7 +170,7 @@ camStartPos :: V3 Double
 camStartPos = V3 0 0 2
 
 mouseSensitivity :: V2 Double
-mouseSensitivity = V2 0.1 0.1
+mouseSensitivity = V2 (pi/500) (pi/500)
 
 wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
@@ -160,7 +179,7 @@ mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
+cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
 cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
 cubeRotationByInput =

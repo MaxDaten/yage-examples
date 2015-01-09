@@ -20,11 +20,6 @@ Flag dev
     Description:   Turn on development settings, logging and timing.
     Default:       False
 
-Flag perf
-    Description:   Enables optimizations
-    Default:       True
-
-
 -------------------------------------------------------------------------------
 
 executable yage-cube
@@ -33,8 +28,11 @@ executable yage-cube
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:          -j8 -O -threaded -rtsopts -with-rtsopts=-N
+    ghc-options:          -O -threaded -rtsopts -with-rtsopts=-N
     ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
+
+    if flag(dev)
+        ghc-options: -O0
 
 
     default-extensions:   NoImplicitPrelude

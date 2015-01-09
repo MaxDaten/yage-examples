@@ -3,15 +3,17 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yage.Examples.Shared
-    ( module Yage.Examples.Shared
-    ) where
+  ( skydome
+  ) where
 
 import Yage.Prelude hiding (concatMap)
 import Yage.Lens
+import Yage.GL
 
 import Yage.Scene
 import Yage.Material
 import Yage.Font
+import qualified Yage.Vertex as V
 import Yage.Geometry3D hiding (Cube)
 import Yage.Formats.Ygm
 
@@ -67,10 +69,8 @@ floorEntity =
     ( basicEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat )
         & renderData .~ buildMeshUV "floor" (gridPos 1 1) (gridUV 1)
 
-
-skydome :: SkyEntity
-skydome =
-    ( basicEntity :: SkyEntity )
-        & renderData .~ (mkFromVerticesF "SkyDome" $ map (position3 =:) . vertices . triangles $ geoSphere 2 1)
 --}
+
+skydome :: Mesh (V.Position Vec3)
+skydome = (mkFromVerticesF "SkyDome" $ map V.Position . vertices . triangles $ geoSphere 2 1)
 
