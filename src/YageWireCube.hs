@@ -59,7 +59,7 @@ configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
 -- type SceneEnvironment = Environment () ()
-type CubeEntity = Entity (RenderData (SVector Word32) (SVector YGMVertex)) (GBaseMaterial Texture)
+type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture)
 data CubeScene = CubeScene
   { _cubeScene          :: DeferredScene
   , _cubeMainViewport   :: Viewport Int
@@ -96,10 +96,10 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
-      <&> albedo.materialTexture  .~ albedoTex
-      <&> normal.stpFactor        .~ 2.0
-      <&> normal.materialTexture  .~ normalTex
-      <&> normal.stpFactor        .~ 2.0
+      <&> albedo.materialTexture     .~ albedoTex
+      <&> normalmap.stpFactor        .~ 2.0
+      <&> normalmap.materialTexture  .~ normalTex
+      <&> normalmap.stpFactor        .~ 2.0
   cubeMesh :: YageResource (Mesh YGMVertex)
   cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
 
@@ -118,16 +118,6 @@ skyDomeW = proc pos -> do
         cubemapRes = pure <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
     envMap <- textureRes =<< cubemapRes
     mat <&> environmentMap.materialTexture .~ envMap
-
-  -- tex <- cubeTextureToTexture "SkyCube" . pure <$> constTextureW skyTex -< ()
-  -- returnA -< skydome
-  --   & materials.skyEnvironmentMap.Mat.matTexture .~ tex
-  --   & entityPosition           .~ pos
-  --   & entityScale              .~ 50
-
-
--- skyTex  = mkTexture2D "SkyBlueprint" <$> (imageRes $ texDir</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
-
 
 bloomSettings = defaultBloomSettings
   & bloomFactor           .~ 0.7
