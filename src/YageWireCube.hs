@@ -72,7 +72,7 @@ makeLenses ''CubeScene
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
 mainWire = proc () -> do
   pipeline <- acquireOnce yDeferredLighting -< ()
-  cam      <- overA hdrCameraHandle cameraControl -< initCamera
+  cam      <- overA camera cameraControl -< initCamera
   scene    <- sceneWire -< cam^.camera
   returnA -< CubeScene scene (defaultViewport 1200 800) cam pipeline
 
@@ -83,7 +83,14 @@ sceneWire = proc cam -> do
   skyDome    <- skyDomeW -< cam^.position
   returnA -< Scene
     { _sceneEntities    = fromList [ cubeEntity ]
-    , _sceneEnvironment = emptyEnvironment & sky ?~ skyDome
+    , _sceneEnvironment = emptyEnvironment & sky    ?~ skyDome
+                                           & lights .~ fromList [ mainLight ]
+    }
+ where
+  mainLight = Light
+    { _lightType      = Pointlight (V3 0 1 25) 100
+    , _lightColor     = 1
+    , _lightIntensity = 50
     }
 
 cubeEntityW :: YageWire t b CubeEntity
@@ -113,24 +120,22 @@ skyDomeW = proc pos -> do
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
   skyMaterial :: YageResource (SkyMaterial Texture)
   skyMaterial = do
-    let mat = SkyMaterial <$> materialRes defaultMaterialSRGB <*> materialRes defaultMaterialSRGB
-        cubemapRes :: YageResource (Cubemap DynamicImage)
-        cubemapRes = pure <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png")
-    envMap <- textureRes =<< cubemapRes
-    mat <&> environmentMap.materialTexture .~ envMap
-
-bloomSettings = defaultBloomSettings
-  & bloomFactor           .~ 0.7
-  & bloomPreDownsampling  .~ 2
-  & bloomGaussPasses      .~ 5
-  & bloomWidth            .~ 2
-  & bloomThreshold        .~ 0.5
+    envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
+    radMap <- textureRes (sameFaces $ defaultMaterialSRGB^.materialTexture)
+    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
+                         (defaultMaterialSRGB & materialTexture .~ radMap)
 
 initCamera = defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
-  & hdrExposure           .~ 2
-  & hdrExposureBias       .~ 0.0
-  & hdrWhitePoint         .~ 11.2
-  & hdrBloomSettings      .~ bloomSettings
+  & exposure           .~ 2
+  & exposureBias       .~ 0.0
+  & whitePoint         .~ 11.2
+  & bloomSettings      .~ (defaultBloomSettings
+    & bloomFactor           .~ 0.7
+    & bloomPreDownsampling  .~ 2
+    & bloomGaussPasses      .~ 5
+    & bloomWidth            .~ 2
+    & bloomThreshold        .~ 0.5)
+
 
 {--
 
@@ -203,8 +208,8 @@ instance HasRenderSystem CubeScene (ResourceT IO) CubeScene () where
 instance HasScene CubeScene DeferredEntity DeferredEnvironment where
   scene = cubeScene
 
-instance HasCamera CubeScene where
-  camera = cubeCamera.camera
+instance HasHDRCamera CubeScene where
+  hdrCamera = cubeCamera
 
 instance HasEntities CubeScene (Seq CubeEntity) where
   entities = cubeScene.entities
