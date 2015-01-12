@@ -84,7 +84,7 @@ sceneWire = proc cam -> do
   returnA -< Scene
     { _sceneEntities    = fromList [ cubeEntity ]
     , _sceneEnvironment = emptyEnvironment & sky    ?~ skyDome
-                                           & lights .~ fromList [ spotlight ]
+                                           & lights .~ fromList [ mainLight, spotlight, directionLight ]
     }
  where
   mainLight = Light
@@ -94,6 +94,7 @@ sceneWire = proc cam -> do
     , _lightIntensity      = 50
     }
   spotlight = makeSpotlight (V3 0 5 0) (V3 0 (-1) 0) 10 13 (V3 1 1 1) 50
+  directionLight = makeDirectionalLight (V3 0 (-1) (-1)) 1 25
 
 cubeEntityW :: YageWire t b CubeEntity
 cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
@@ -125,7 +126,7 @@ skyDomeW = proc pos -> do
   skyMaterial = do
     envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
     radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
+    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap & materialColor .~ darken 0.1 (opaque white))
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 
 initCamera = defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
