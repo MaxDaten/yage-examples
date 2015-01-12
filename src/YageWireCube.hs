@@ -84,14 +84,16 @@ sceneWire = proc cam -> do
   returnA -< Scene
     { _sceneEntities    = fromList [ cubeEntity ]
     , _sceneEnvironment = emptyEnvironment & sky    ?~ skyDome
-                                           & lights .~ fromList [ mainLight ]
+                                           & lights .~ fromList [ spotlight ]
     }
  where
   mainLight = Light
-    { _lightType      = Pointlight (V3 0 1 25) 100
-    , _lightColor     = 1
-    , _lightIntensity = 50
+    { _lightType           = Pointlight
+    , _lightTransformation = idTransformation & scale .~ 5 & position .~ (V3 0 5 0)
+    , _lightColor          = 1
+    , _lightIntensity      = 50
     }
+  spotlight = makeSpotlight (V3 0 5 0) (V3 0 (-1) 0) 10 13 (V3 1 1 1) 50
 
 cubeEntityW :: YageWire t b CubeEntity
 cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
@@ -107,6 +109,7 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
       <&> normalmap.stpFactor        .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
       <&> normalmap.stpFactor        .~ 2.0
+      <&> roughness.materialColor    .~ 0.5
   cubeMesh :: YageResource (Mesh YGMVertex)
   cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
 
@@ -121,7 +124,7 @@ skyDomeW = proc pos -> do
   skyMaterial :: YageResource (SkyMaterial Texture)
   skyMaterial = do
     envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
-    radMap <- textureRes (sameFaces $ defaultMaterialSRGB^.materialTexture)
+    radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 
