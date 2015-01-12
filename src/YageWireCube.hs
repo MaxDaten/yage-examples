@@ -58,7 +58,6 @@ appConf = defaultAppConfig{ logPriority = WARNING }
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
--- type SceneEnvironment = Environment () ()
 type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture)
 data CubeScene = CubeScene
   { _cubeScene          :: DeferredScene
@@ -107,7 +106,7 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
-      <&> normalmap.stpFactor        .~ 2.0
+      <&> albedo.stpFactor           .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
       <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5

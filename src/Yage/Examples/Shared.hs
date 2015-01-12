@@ -4,17 +4,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yage.Examples.Shared
   ( skydome
+  , planeMesh
   ) where
 
 import Yage.Prelude hiding (concatMap)
 import Yage.Lens
 import Yage.GL
 
+import Linear
 import Yage.Scene
 import Yage.Material
 import Yage.Font
 import qualified Yage.Vertex as V
 import Yage.Geometry3D hiding (Cube)
+import "yage" Yage.Geometry
 import Yage.Formats.Ygm
 
 import Yage.Rendering.Pipeline.Deferred
@@ -56,21 +59,20 @@ pyramidEntity =
 vertexFormat :: Pos GLfloat -> Tex GLfloat -> TBN GLfloat -> Vertex (Y'P3TX2TN GLfloat)
 vertexFormat = internalFormat
 
-buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo vertexFormat pos tex
 
 boxEntity :: (Default mat) => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat
 boxEntity =
     ( basicEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat )
         & renderData .~ buildMeshUV "box" (cubePos 1) (cubeSingleUV)
 
-
-floorEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat
-floorEntity =
-    ( basicEntity :: Default mat => Entity (Mesh (Vertex (Y'P3TX2TN GLfloat))) mat )
-        & renderData .~ buildMeshUV "floor" (gridPos 1 1) (gridUV 1)
-
 --}
 
-skydome :: Mesh (V.Position Vec3)
-skydome = (mkFromVerticesF "SkyDome" $ map V.Position . vertices . triangles $ geoSphere 2 1)
+planeMesh :: Mesh YGMVertex
+planeMesh = buildMeshUV "floor" (gridPos 4 (1 :: Vec2)) (gridUV 4)
 
+
+skydome :: Mesh (V.Position Vec3)
+skydome = mkFromVerticesF "SkyDome" $ map V.Position . vertices . triangles $ geoSphere 2 1
+
+buildMeshUV :: (Foldable f, HasTriangles t, Epsilon a, Floating a, RealFrac a ) => MeshId -> f (t (Pos a)) -> f (t (Tex a)) -> Mesh YGMVertex
+buildMeshUV name pos tex = meshFromTriGeo name $ buildTriGeo ygmFormat pos tex
