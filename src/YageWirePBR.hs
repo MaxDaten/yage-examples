@@ -92,7 +92,8 @@ pbrTestScene = proc () -> do
     }
  where
   directionalLight = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
-  spotLight01 = makeSpotlight ( V3 8 8 0 ) ( V3 (-5) (-5) 0 ) 50 60 ( V3 1 0 0 ) 2
+  -- spotLight01 = makeSpotlight ( V3 0 8 8 ) ( V3 0 (-5) (-5) ) 50 60 ( V3 1 0 0 ) 10
+  spotLight01 = makeSpotlight ( V3 8 8 0 ) ( V3 (-5) (-5) 0 ) 50 60 ( V3 1 0 0 ) 10
 
 hdrCameraW :: Real t => YageWire t () HDRCamera
 hdrCameraW =
@@ -146,9 +147,10 @@ groundEntityW =
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
-      <&> albedo.stpFactor           .~ 4.0
+      <&> albedo.stpFactor           .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
-      <&> normalmap.stpFactor        .~ 4.0
+      <&> normalmap.materialColor    .~ rgb 5 5 5 `withOpacity` 0.75
+      <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
 -- controller wires
 
