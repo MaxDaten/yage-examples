@@ -149,10 +149,10 @@ groundEntityW =
       <&> albedo.materialTexture     .~ albedoTex
       <&> albedo.stpFactor           .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
-      <&> normalmap.materialColor    .~ rgb 5 5 5 `withOpacity` 0.75
       <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
--- controller wires
+
+-- * Controller Wires
 
 camStartPos :: V3 Double
 camStartPos = V3 0 1 5
@@ -169,6 +169,7 @@ mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mous
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
+-- | Boilerplate
 
 main :: IO ()
 main = yageMain "yage-cube" configuration pbrTestScene (1/60)
