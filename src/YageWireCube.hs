@@ -53,7 +53,7 @@ data Configuration = Configuration
 makeLenses ''Configuration
 
 appConf :: ApplicationConfig
-appConf = defaultAppConfig{ logPriority = WARNING }
+appConf = defaultAppConfig{ logPriority = INFO }
 
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
@@ -61,19 +61,16 @@ configuration = Configuration appConf winSettings (MonitorOptions "localhost" 80
 type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture)
 data CubeScene = CubeScene
   { _cubeScene          :: DeferredScene
-  , _cubeMainViewport   :: Viewport Int
   , _cubeCamera         :: HDRCamera
-  , _cubeSceneRenderer  :: RenderSystem CubeScene ()
   }
 
 makeLenses ''CubeScene
 
 mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
 mainWire = proc () -> do
-  pipeline <- acquireOnce yDeferredLighting -< ()
   cam      <- overA camera cameraControl -< initCamera
   scene    <- sceneWire -< cam^.camera
-  returnA -< CubeScene scene (defaultViewport 1200 800) cam pipeline
+  returnA -< CubeScene scene cam
 
 
 sceneWire :: Real t => YageWire t Camera DeferredScene
@@ -191,7 +188,7 @@ cubeRotationByInput =
  . 1
 
 main :: IO ()
-main = yageMain "yage-cube" configuration mainWire (1/60)
+main = yageMain "yage-cube" configuration mainWire yDeferredLighting (1/60)
 
 instance HasMonitorOptions Configuration where
   monitorOptions = mainMonitorOptions
@@ -202,11 +199,6 @@ instance HasWindowConfig Configuration where
 instance HasApplicationConfig Configuration where
   applicationConfig = mainAppConfig
 
-instance HasViewport CubeScene Int where
-  viewport = cubeMainViewport
-
-instance HasRenderSystem CubeScene (ResourceT IO) CubeScene () where
-  renderSystem = cubeSceneRenderer
 
 instance HasScene CubeScene DeferredEntity DeferredEnvironment where
   scene = cubeScene

@@ -58,7 +58,7 @@ data Configuration = Configuration
 makeLenses ''Configuration
 
 appConf :: ApplicationConfig
-appConf = defaultAppConfig{ logPriority = WARNING }
+appConf = defaultAppConfig{ logPriority = INFO }
 
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
@@ -68,9 +68,7 @@ configuration = Configuration appConf winSettings (MonitorOptions "localhost" 80
 
 data PBRScene = PBRScene
   { _pbrScene          :: DeferredScene
-  , _pbrMainViewport   :: Viewport Int
   , _pbrCamera         :: HDRCamera
-  , _pbrSceneRenderer  :: RenderSystem PBRScene ()
   }
 
 makeLenses ''PBRScene
@@ -78,17 +76,13 @@ makeLenses ''PBRScene
 
 pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
-  pipeline <- acquireOnce yDeferredLighting -< ()
-
   hdrCam  <- hdrCameraW -< ()
   skyDome <- skyDomeW  -< hdrCam^.camera.position
   floorEntity <- groundEntityW -< ()
 
   returnA -< PBRScene
     { _pbrScene          = Scene (fromList [floorEntity]) (emptyEnvironment & sky ?~ skyDome & lights .~ fromList [spotLight01])
-    , _pbrMainViewport   = defaultViewport 1200 800
     , _pbrCamera         = hdrCam
-    , _pbrSceneRenderer  = pipeline
     }
  where
   directionalLight = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
@@ -172,7 +166,7 @@ cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement c
 -- | Boilerplate
 
 main :: IO ()
-main = yageMain "yage-cube" configuration pbrTestScene (1/60)
+main = yageMain "yage-pbr" configuration pbrTestScene yDeferredLighting (1/60)
 
 instance HasMonitorOptions Configuration where
   monitorOptions = mainMonitorOptions
@@ -182,12 +176,6 @@ instance HasWindowConfig Configuration where
 
 instance HasApplicationConfig Configuration where
   applicationConfig = mainAppConfig
-
-instance HasViewport PBRScene Int where
-  viewport = pbrMainViewport
-
-instance HasRenderSystem PBRScene (ResourceT IO) PBRScene () where
-  renderSystem = pbrSceneRenderer
 
 instance HasScene PBRScene DeferredEntity DeferredEnvironment where
   scene = pbrScene
