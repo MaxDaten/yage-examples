@@ -124,7 +124,7 @@ skyDomeW = proc pos -> do
   environmentTexture = "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
   skyEntity :: YageResource DeferredSky
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
-  skyMaterial :: YageResource (SkyMaterial Texture)
+  skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
     envMap <- textureRes =<< (sameFaces <$> (imageRes environmentTexture ))
     radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
@@ -135,7 +135,7 @@ groundEntityW :: YageWire t () DeferredEntity
 groundEntityW =
  acquireOnce (Entity <$> fromMesh planeMesh <*> groundMaterial <*> pure (idTransformation & scale._xz .~ 13 & position._y .~ 0.75) )
  where
- groundMaterial :: YageResource (GBaseMaterial Texture)
+ groundMaterial :: YageResource (GBaseMaterial Texture2D)
  groundMaterial = do
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")

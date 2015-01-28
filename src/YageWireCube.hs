@@ -58,7 +58,7 @@ appConf = defaultAppConfig{ logPriority = INFO }
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
-type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture)
+type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture2D)
 data CubeScene = CubeScene
   { _cubeScene          :: DeferredScene
   , _cubeCamera         :: HDRCamera
@@ -97,7 +97,7 @@ cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
  where
   cube :: YageResource CubeEntity
   cube = Entity <$> (fromMesh =<< cubeMesh) <*> cubeMaterial <*> pure idTransformation
-  cubeMaterial :: YageResource (GBaseMaterial Texture)
+  cubeMaterial :: YageResource (GBaseMaterial Texture2D)
   cubeMaterial = do
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
@@ -118,7 +118,7 @@ skyDomeW = proc pos -> do
  where
   skyEntity :: YageResource DeferredSky
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
-  skyMaterial :: YageResource (SkyMaterial Texture)
+  skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
     envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
     radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
