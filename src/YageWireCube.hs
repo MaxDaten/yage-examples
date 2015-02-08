@@ -121,7 +121,7 @@ skyDomeW = proc pos -> do
   skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
     envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
-    radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    radMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap & materialColor .~ darken 0.1 (opaque white))
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 

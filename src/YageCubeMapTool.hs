@@ -26,7 +26,7 @@ import           Yage.HDR
 import           Yage.Scene
 import           Yage.Texture
 import           Yage.Viewport
-import           Yage.Uniforms             as Uniforms
+import           Yage.Uniform             as Uniforms
 import           Yage.Texture.TextureAtlas
 
 import           Yage.UI.GUI

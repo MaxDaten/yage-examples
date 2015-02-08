@@ -11,9 +11,9 @@
 module Main where
 
 
-import Yage
+import Yage hiding ((><))
 import Yage.Lens hiding ((<.>))
-import Yage.Math hiding (normal)
+import Yage.Math hiding (normal, (><))
 import Yage.Wire hiding ((<>))
 import Yage.Wire.Utils
 
@@ -31,6 +31,8 @@ import Yage.Rendering.Pipeline.Deferred.SkyPass
 import Yage.Formats.Ygm
 import Yage.Examples.Shared
 import Data.Traversable (sequenceA)
+import qualified Data.Sequence as Seq
+import Data.Sequence ((><))
 
 
 winSettings :: WindowConfig
@@ -79,15 +81,16 @@ pbrTestScene = proc () -> do
   hdrCam  <- hdrCameraW -< ()
   skyDome <- skyDomeW  -< hdrCam^.camera.position
   floorEntity <- groundEntityW -< ()
+  spheres     <- spheresW      -< ()
 
   returnA -< PBRScene
-    { _pbrScene          = Scene (fromList [floorEntity]) (emptyEnvironment & sky ?~ skyDome & lights .~ fromList [spotLight01])
+    { _pbrScene          = Scene (fromList [floorEntity] >< spheres) (emptyEnvironment & sky ?~ skyDome & lights.spot .~ fromList [directionalLight])
     , _pbrCamera         = hdrCam
     }
  where
-  directionalLight = makeDirectionalLight (V3 (0) (-1) (-1)) (V3 1 0.953 0.918) 0.75
+  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
   -- spotLight01 = makeSpotlight ( V3 0 8 8 ) ( V3 0 (-5) (-5) ) 50 60 ( V3 1 0 0 ) 10
-  spotLight01 = makeSpotlight ( V3 8 8 0 ) ( V3 (-5) (-5) 0 ) 50 60 ( V3 1 0 0 ) 10
+  spotLight01 = makeSpotlight ( V3 8 8 0 ) ( V3 (-5) (-5) 0 ) 50 60 ( V3 1 0 0 ) 1
 
 hdrCameraW :: Real t => YageWire t () HDRCamera
 hdrCameraW =
@@ -97,10 +100,10 @@ hdrCameraW =
 hdrController :: Num t => YageWire t HDRCamera HDRCamera
 hdrController =
   exposure      <~~ ( spin (0, 10) 1.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
-                                          ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
+                                           ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
 
   exposureBias  <~~ ( spin (-10, 10) 0.0 <<< (( 0.01 <$) <$> keyJustPressed Key'M)     &&&
-                                            ((-0.01 <$) <$> keyJustPressed Key'N) ) >>>
+                                             ((-0.01 <$) <$> keyJustPressed Key'N) ) >>>
   whitePoint    <~~ pure 11.2       >>>
   bloomSettings <~~ pure bloomConfig
  where
@@ -121,14 +124,15 @@ skyDomeW = proc pos -> do
     & transformation.scale     .~ 50
 
  where
-  environmentTexture = "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png"
   skyEntity :: YageResource DeferredSky
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
   skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
-    envMap <- textureRes =<< (sameFaces <$> (imageRes environmentTexture ))
-    radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap & materialColor .~ darken 0.1 (opaque white))
+    envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
+    radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
+    -- radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    -- envMap `seq` (error "xxx")
+    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 
 groundEntityW :: YageWire t () DeferredEntity
@@ -145,6 +149,44 @@ groundEntityW =
       <&> normalmap.materialTexture  .~ normalTex
       <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
+
+spheresW :: YageWire t () (Seq DeferredEntity)
+spheresW   = proc () -> do
+  acquireOnce (placeEntityOnGridXZ (9, 1) (V2 10 1) <$> sphereEntity) -< ()
+  where
+  sphereEntity :: YageResource DeferredEntity
+  sphereEntity =
+    Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
+           <&> transformation.scale        //~ 2.0
+           <&> transformation.position._y  .~ 1.5
+  sphereMaterialId :: YageResource (GBaseMaterial Texture2D)
+  sphereMaterialId = do
+    roughTex    <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_r.png")
+    normalTex   <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_t.png")
+    gBaseMaterialRes defaultGBaseMaterial
+      <&> albedo.materialColor       .~ Mat.opaque Mat.gold
+      -- <&> roughness.materialTexture  .~ roughTex
+      -- <&> roughness.materialColor    .~ 0.5
+      <&> roughness.stpFactor        .~ 2.0
+      -- <&> normalmap.materialTexture  .~ normalTex
+      <&> normalmap.stpFactor        .~ 2.0
+      <&> metallic.materialColor     .~ 1.0
+
+
+placeEntityOnGridXZ :: (Int, Int) -> V2 Double -> DeferredEntity -> Seq DeferredEntity
+placeEntityOnGridXZ (xCnt, yCnt) (V2 dimX dimY) template = foldr (\xyp s -> s |> generate xyp) Seq.empty (gridIdx `zip` positions)
+ where
+  generate ((xi, yi), pos) =
+    let roughValue  = xi / fromIntegral (xCnt-1)
+    in template & transformation.position._xz .~ pos
+                & materials.roughness.materialColor .~ (realToFrac roughValue)
+
+  positions   = map calculatePosition gridIdx
+  gridIdx     = [ (fromIntegral xi, fromIntegral yi) | xi <- [0 .. xCnt-1], yi <- [0 .. yCnt-1] ]
+  startPoint  = (step + V2 (-dimX) (dimY)) ^* 0.5
+  step        = 0 & _x .~  dimX / fromIntegral xCnt
+                  & _y .~ -dimY / fromIntegral yCnt
+  calculatePosition (xi, yi) =  startPoint + V2 xi yi * step
 
 -- * Controller Wires
 

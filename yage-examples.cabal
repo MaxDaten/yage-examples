@@ -81,3 +81,5 @@ executable yage-pbr
                         , netwire         == 5.0.0
                         , lens            >= 4.6
                         , linear          >= 1.15
+
+                        , containers      >= 0.5

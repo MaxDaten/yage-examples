@@ -5,6 +5,8 @@
 module Yage.Examples.Shared
   ( skydome
   , planeMesh
+  , cubeMesh
+  , sphereMesh
   ) where
 
 import Yage.Prelude hiding (concatMap)
@@ -70,6 +72,11 @@ boxEntity =
 planeMesh :: Mesh YGMVertex
 planeMesh = buildMeshUV "floor" (gridPos 4 (1 :: Vec2)) (gridUV 4)
 
+cubeMesh :: YageResource (Mesh YGMVertex)
+cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
+
+sphereMesh :: YageResource (Mesh YGMVertex)
+sphereMesh = meshRes $ loadYGM id ( "res" </> "model" </> "sphere.ygm", mkSelection [] )
 
 skydome :: Mesh (V.Position Vec3)
 skydome = mkFromVerticesF "SkyDome" $ map V.Position . vertices . triangles $ geoSphere 2 1
