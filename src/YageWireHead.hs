@@ -144,19 +144,20 @@ skyDomeW = proc pos -> do
  where
   skyEntity :: YageResource DeferredSky
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
+
   skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
-    --envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
-    --radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
-    envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
+    radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
+    --envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    --radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 
 pointlightRedW :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t a Light
 pointlightRedW = proc _ -> do
-  --pos <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
-  returnA -< makePointlight (V3 0 2 0) 5 (V3 1 0 0) 5
+  pos <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
+  returnA -< makePointlight pos 5 (V3 1 0 0) 0.6
 {-
 pLightBlueW :: Real t => YageWire t a Light
 pLightBlueW =
