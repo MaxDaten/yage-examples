@@ -10,40 +10,60 @@
 
 module Main where
 
-import Yage
+
+import Yage hiding ((><), point)
 import Yage.Lens hiding ((<.>))
-import Yage.Rendering
-import Yage.Math
+import Yage.Math hiding (normal, (><), point)
 import Yage.Wire hiding ((<>))
+import Yage.Wire.Utils
 
-import           Yage.Camera
-import           Yage.Scene
-import           Yage.HDR
-import           Yage.Texture
-import           Yage.UI.GUI
+import Yage.Camera
+import Yage.Scene
+import qualified Yage.Vertex as V
+import Yage.HDR
+import Yage.UI.GUI hiding (Texture)
+import Yage.Transformation
 import qualified Yage.Resources as Res
-import qualified Yage.Material  as Mat
-import           Yage.Pipeline.Deferred
-import           Yage.Transformation
-
-import           Yage.Examples.Shared
-
-import qualified Yage.Core.OpenGL as GL
+import Yage.Material as Mat
+import Yage.Rendering.Resources.GL
+import Yage.Rendering.Pipeline.Deferred
+import Yage.Rendering.Pipeline.Deferred.SkyPass
+import Yage.Formats.Ygm
+import Yage.Examples.Shared
+import Data.Traversable (sequenceA)
+import qualified Data.Sequence as Seq
+import Data.Sequence ((><))
 
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
-    { windowSize = (1200, 800)
-    , windowHints =
-        [ WindowHint'ContextVersionMajor  4
-        , WindowHint'ContextVersionMinor  1
-        , WindowHint'OpenGLProfile        OpenGLProfile'Core
-        , WindowHint'OpenGLForwardCompat  True
-        , WindowHint'RefreshRate          60
-        --, WindowHint'Resizable            False
-        --, WindowHint'Decorated            False
-        ]
-     }
+  { windowSize = (1200, 800)
+  , windowHints =
+    [ WindowHint'ContextVersionMajor  4
+    , WindowHint'ContextVersionMinor  4
+    , WindowHint'OpenGLProfile        OpenGLProfile'Core
+    , WindowHint'OpenGLForwardCompat  True
+    , WindowHint'RefreshRate          60
+    , WindowHint'sRGBCapable          True
+    , WindowHint'OpenGLDebugContext   True
+    -- , WindowHint'Resizable            False
+    , WindowHint'Decorated            True
+    ]
+  }
+
+data Configuration = Configuration
+  { _mainAppConfig      :: ApplicationConfig
+  , _mainWindowConfig   :: WindowConfig
+  , _mainMonitorOptions :: MonitorOptions
+  }
+
+makeLenses ''Configuration
+
+appConf :: ApplicationConfig
+appConf = defaultAppConfig{ logPriority = INFO }
+
+configuration :: Configuration
+configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
 data HeadView = HeadView
     { _viewCamera     :: !Camera
@@ -63,110 +83,97 @@ data Head = Head
 makeLenses ''HeadView
 makeLenses ''Head
 
-
-main :: IO ()
-main = yageMain "yage-head" defaultAppConfig winSettings mainWire yDeferredLighting (1/60)
-
 -------------------------------------------------------------------------------
--- View Definition
-type SceneEntity      = GeoEntity
-type SceneEnvironment = Environment Light SkyEntity
-type HeadScene        = Scene HDRCamera SceneEntity SceneEnvironment GUI
+-- * View Definition
 
+data HeadScene = HeadScene
+  { _headScene  :: DeferredScene
+  , _headCamera :: HDRCamera
+  }
 
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () HeadScene
+makeLenses ''HeadScene
+
+-- * Main Logic
+
+mainWire :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () HeadScene
 mainWire = proc () -> do
+  hdrCam     <- overA camera cameraControl -< defaultHDRCamera $ idCamera (deg2rad 75) 0.1 100
+  skyDome    <- skyDomeW  -< hdrCam^.camera.position
+  headEntity <- headW -< ()
+  redLight   <- pointlightRedW -< ()
 
-    cam    <- overA hdrCameraHandle cameraControl -< camera
-    sky    <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
+  let env = emptyEnvironment
+        & sky ?~ skyDome
+        & lights.dir   .~ singleton directionalLight
+        & lights.point .~ singleton redLight
+      scene = Scene (singleton headEntity) env
+  returnA -< HeadScene scene hdrCam
+ where
+  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
 
-    headEntity <- headEntityW >>> (entityOrientation <~~ headRotationByInput) -< ()
+headW :: YageWire t () DeferredEntity
+headW = acquireOnce headEntity
+ where
+  headEntity :: YageResource DeferredEntity
+  headEntity = Entity
+    <$> (fromMesh =<< headMesh) <*> headMaterial <*> pure idTransformation
+    <&> transformation.scale         .~ 4
+    <&> transformation.position      .~ V3 0 0.5 0
 
-    redLight  <- pLightRedW  -< ()
-    blueLight <- pLightBlueW -< ()
+  headMesh :: YageResource (Mesh YGMVertex)
+  headMesh = meshRes $ loadYGM id ("res" </> "model" </> "head.ygm", mkSelection [])
 
-    returnA -< emptyScene cam emptyGUI
-                & sceneSky      ?~ sky
-                & sceneEntities .~ fromList [ headEntity ]
-                & sceneLights   .~ fromList [ frontPLight, backPLight, redLight, blueLight ]
+  headMaterial :: YageResource (GBaseMaterial Texture2D)
+  headMaterial = do
+    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"small"</>"head_albedo.jpg")
+    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"small"</>"head_tangent.jpg")
+    gBaseMaterialRes defaultGBaseMaterial
+      <&> albedo.materialTexture     .~ albedoTex
+      <&> albedo.materialTransformation.scale._y .~ (-1)
+      <&> normalmap.materialTexture  .~ normalTex
+      <&> normalmap.materialTransformation.scale._y .~ (-1)
+      <&> roughness.materialColor    .~ 0.8
 
-    where
-    texDir      = "res" </> "tex"
+skyDomeW :: Real t => YageWire t (V3 Double) DeferredSky
+skyDomeW = proc pos -> do
+  skye <- acquireOnce skyEntity -< ()
+  returnA -< skye
+    & transformation.position  .~ pos
+    & transformation.scale     .~ 50
 
-    skyTex :: YageResource Texture
-    skyTex = mkTextureCubeMip "Grace" <$>
-                cubeCrossMipsRes Strip (texDir</>"env"</>"grace"</>"pmrem"</>"*_m<->.png")
-                    <&> textureConfig.texConfWrapping.texWrapClamping .~ GL.ClampToEdge
+ where
+  skyEntity :: YageResource DeferredSky
+  skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
+  skyMaterial :: YageResource (SkyMaterial TextureCube)
+  skyMaterial = do
+    --envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
+    --radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
+    envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
+                         (defaultMaterialSRGB & materialTexture .~ radMap)
 
-    skyDomeW :: YageWire t (V3 Double) SkyEntity
-    skyDomeW = proc pos -> do
-        tex <- constTextureW skyTex -< ()
-        returnA -< skydome & materials.skyEnvironmentMap
-                                      .Mat.matTexture .~ tex
-                           & materials.skyRadianceMap
-                                      .Mat.matTexture .~ tex
-                           & entityPosition           .~ pos
-                           & entityScale              .~ 50
-
-    frontPLight     = Light
-                        { _lightType        = Pointlight (V3 0 0.5 5) 20
-                        , _lightColor       = V3 1 1 1
-                        , _lightIntensity   = 1
-                        }
-    backPLight      = Light
-                        { _lightType        = Pointlight (negate (V3 1 1 3)) 30
-                        , _lightColor       = V3 0.8 0.8 1
-                        , _lightIntensity   = 1
-                        }
-    pLightRedW =
-        Light <$> (Pointlight <$> arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time
-                              <*> pure 1)
-              <*> (pure $ V3 1.0 0.0 0.0)
-              <*> (pure 0.1)
-
-    pLightBlueW =
-        Light <$> (Pointlight <$> arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time
-                              <*> pure 1)
-              <*> (pure $ V3 0.85 0.85 1.0)
-              <*> (pure 0.1)
-
-    headEntityW :: YageWire t b GeoEntity
-    headEntityW =
-        let albedoTex = mkTexture2D "Albedo" <$> (imageRes $ texDir</>"head"</>"small"</>"head_albedo.jpg")
-            normalTex = mkTexture2D "Tangent" <$> (imageRes $ texDir</>"head"</>"small"</>"head_tangent.jpg")
-        in (pure (basicEntity :: GeoEntity)
-                >>> renderData <~~ constMeshW headMesh
-                >>> materials.albedoMaterial.Mat.matTexture <~~ constTextureW albedoTex
-                >>> materials.normalMaterial.Mat.matTexture <~~ constTextureW normalTex)
-                <&> materials.albedoMaterial.Mat.stpFactor %~ negate
-                <&> materials.normalMaterial.Mat.stpFactor %~ negate
-                <&> entityScale         .~ 4
-                <&> entityPosition      .~ V3 0 0.5 0
-
-    headMesh :: YageResource (Mesh GeoVertex)
-    headMesh = meshRes $ loadYGM geoVertex ( "res" </> "model" </> "head.ygm", mkSelection [] )
-
-    bloomSettings   = defaultBloomSettings
-                        & bloomFactor           .~ 2
-                        & bloomPreDownsampling  .~ 1
-                        & bloomGaussPasses      .~ 7
-                        & bloomWidth            .~ 1
-                        & bloomThreshold        .~ 0.6
-
-    camera          = defaultHDRCamera ( mkCameraFps (deg2rad 75) (0.1,1000.0) )
-                        & hdrExposure           .~ 0.5
-                        & hdrExposureBias       .~ 0.0
-                        & hdrWhitePoint         .~ 11.2
-                        & hdrBloomSettings      .~ bloomSettings
+pointlightRedW :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t a Light
+pointlightRedW = proc _ -> do
+  --pos <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
+  returnA -< makePointlight (V3 0 2 0) 5 (V3 1 0 0) 5
+{-
+pLightBlueW :: Real t => YageWire t a Light
+pLightBlueW =
+    Light <$> (Pointlight <$> arr (\t-> V3 0 1 (1) + V3 0.5 0.5 0.5 * V3 (cos t) (sin t) (sin t)) . arr (/2) . time
+                          <*> pure 1)
+          <*> (pure $ V3 0.85 0.85 1.0)
+          <*> (pure 0.1)
+-}
 
 
-
+-- * Movement
 
 camStartPos :: V3 Double
 camStartPos = V3 0 0.1 1
 
 mouseSensitivity :: V2 Double
-mouseSensitivity = V2 0.1 0.1
+mouseSensitivity = V2 (-pi/500) (-pi/500)
 
 wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
@@ -187,4 +194,32 @@ headRotationByInput =
   . smoothRotationByKey acc att ( xAxis ) Key'Up
   . smoothRotationByKey acc att (-xAxis ) Key'Down
   . 1
+
+-- * The Main
+
+main :: IO ()
+main = yageMain "yage-head" configuration mainWire yDeferredLighting (1/60)
+
+-- * Boilerplate
+
+instance HasMonitorOptions Configuration where
+  monitorOptions = mainMonitorOptions
+
+instance HasWindowConfig Configuration where
+  windowConfig = mainWindowConfig
+
+instance HasApplicationConfig Configuration where
+  applicationConfig = mainAppConfig
+
+instance HasScene HeadScene DeferredEntity DeferredEnvironment where
+  scene = headScene
+
+instance HasHDRCamera HeadScene where
+  hdrCamera = headCamera
+
+instance HasEntities HeadScene (Seq DeferredEntity) where
+  entities = headScene.entities
+
+instance LinearInterpolatable HeadScene where
+  lerp _ _ = id
 
