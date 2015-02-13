@@ -11,9 +11,9 @@
 module Main where
 
 
-import Yage hiding ((><))
+import Yage hiding ((><), point)
 import Yage.Lens hiding ((<.>))
-import Yage.Math hiding (normal, (><))
+import Yage.Math hiding (normal, (><), point)
 import Yage.Wire hiding ((<>))
 import Yage.Wire.Utils
 
@@ -84,13 +84,21 @@ pbrTestScene = proc () -> do
   floorEntity <- groundEntityW -< ()
   spheres     <- spheresW      -< ()
 
+  let env = emptyEnvironment
+        & sky ?~ skyDome
+        & lights.dir   .~ fromList [directionalLight]
+        & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
+        & lights.spot  .~ singleton spotLight01
   returnA -< PBRScene
-    { _pbrScene          = Scene (fromList [floorEntity] >< spheres) (emptyEnvironment & sky ?~ skyDome & lights.spot .~ fromList [directionalLight])
+    { _pbrScene          = Scene (fromList [floorEntity] >< spheres) env
     , _pbrCamera         = hdrCam
     }
  where
-  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
-  -- spotLight01 = makeSpotlight ( V3 0 8 8 ) ( V3 0 (-5) (-5) ) 50 60 ( V3 1 0 0 ) 10
+  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.0
+  pLight0 = makePointlight (V3 4 1 4) 4 (V3 0.3 1 0.3) 0.6
+  pLight1 = pLight0 & position._z  %~ negate & lightColor .~ V3 0.3 0.3 1
+  pLight2 = pLight0 & position._x  %~ negate & lightColor .~ V3 0.3 1 1
+  pLight3 = pLight0 & position._xz.mapped %~ negate & lightColor .~ V3 1 0.3 1
   spotLight01 = makeSpotlight ( V3 8 8 0 ) ( V3 (-5) (-5) 0 ) 50 60 ( V3 1 0 0 ) 1
 
 hdrCameraW :: Real t => YageWire t () HDRCamera
@@ -132,7 +140,7 @@ skyDomeW = proc pos -> do
     envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
     radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
     -- radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    -- envMap `seq` (error "xxx")
+    -- envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
                          (defaultMaterialSRGB & materialTexture .~ radMap)
 
@@ -172,7 +180,6 @@ spheresW   = proc () -> do
       -- <&> normalmap.materialTexture  .~ normalTex
       <&> normalmap.stpFactor        .~ 2.0
       <&> metallic.materialColor     .~ 1.0
-
 
 placeEntityOnGridXZ :: (Int, Int) -> V2 Double -> DeferredEntity -> Seq DeferredEntity
 placeEntityOnGridXZ (xCnt, yCnt) (V2 dimX dimY) template = foldr (\xyp s -> s |> generate xyp) Seq.empty (gridIdx `zip` positions)
