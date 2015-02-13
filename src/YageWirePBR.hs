@@ -40,11 +40,12 @@ winSettings = WindowConfig
     { windowSize = (1600, 1000)
     , windowHints =
         [ WindowHint'ContextVersionMajor  4
-        , WindowHint'ContextVersionMinor  3
+        , WindowHint'ContextVersionMinor  4
         , WindowHint'OpenGLProfile        OpenGLProfile'Core
         , WindowHint'OpenGLForwardCompat  True
         , WindowHint'RefreshRate          60
-        -- , WindowHint'OpenGLDebugContext   True
+        , WindowHint'sRGBCapable          True
+        , WindowHint'OpenGLDebugContext   True
         -- , WindowHint'Resizable            False
         , WindowHint'Decorated            True
         ]
