@@ -59,12 +59,12 @@ executable yage-pbr
 
     other-modules:        Yage.Examples.Shared
 
-    ghc-options:         -threaded -O2 -v0 -rtsopts -with-rtsopts=-N -with-rtsopts=-T 
+    ghc-options:         -threaded -O2 -v0
     ghc-prof-options:     -w -rtsopts -prof -auto-all -caf-all
 
 
     if flag(dev)
-        ghc-options:      -O -rtsopts
+        ghc-options:      -O0 -rtsopts -with-rtsopts=-N -with-rtsopts=-T 
 
     default-extensions:   NoImplicitPrelude
                           Arrows
