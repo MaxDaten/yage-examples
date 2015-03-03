@@ -77,20 +77,36 @@ data PBRScene = PBRScene
 makeLenses ''PBRScene
 
 
-pbrTestScene :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () PBRScene
+pbrTestScene :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
+  t <- time -< ()
   hdrCam  <- hdrCameraW -< ()
   skyDome <- skyDomeW  -< hdrCam^.camera.position
-  floorEntity <- groundEntityW -< ()
-  spheres     <- spheresW      -< ()
+  planeE  <- groundEntityW <&> transformation.scale .~ 20 -< ()
+  let backOrientation = axisAngle (V3 1 0 0) (deg2rad $ 90)
+      wallBack = planeE & transformation.orientation .~ backOrientation
+                        & transformation.position._z .~ (-10)
+      leftOrientation =  axisAngle (V3 0 1 0) (deg2rad $ 90) * backOrientation
+      wallLeft = planeE & transformation.orientation .~ leftOrientation
+                        & transformation.position._x .~ -10
+      rightOrientation = axisAngle (V3 0 1 0) (deg2rad $ -90) * backOrientation
+      wallRight = planeE & transformation.orientation .~ rightOrientation
+                         & transformation.position._x .~ 10
+      floorE = planeE & transformation.position._y .~ -10
+      ceilingE = planeE & transformation.orientation .~ axisAngle (V3 1 0 0) (deg2rad $ 180)
+                        & transformation.position._y .~ 10
+  spheres     <- spheresW -< ()
 
   let env = emptyEnvironment
         & sky ?~ skyDome
         & lights.dir   .~ fromList [directionalLight]
         & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
         & lights.spot  .~ singleton spotLight01
+      entities = empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
+      --  |> ( wallR & transformation.position._xy .~ V2 5 5 )
+      --  |> floorE
   returnA -< PBRScene
-    { _pbrScene          = Scene (fromList [floorEntity] >< spheres) env
+    { _pbrScene          = Scene (entities >< spheres) env
     , _pbrCamera         = hdrCam
     }
  where
@@ -146,7 +162,7 @@ skyDomeW = proc pos -> do
 
 groundEntityW :: YageWire t () DeferredEntity
 groundEntityW =
- acquireOnce (Entity <$> fromMesh planeMesh <*> groundMaterial <*> pure (idTransformation & scale._xz .~ 13 & position._y .~ 0.75) )
+ acquireOnce (Entity <$> fromMesh planeMesh <*> groundMaterial <*> pure (idTransformation & scale._xz .~ 13 & position._y .~ 0.1) )
  where
  groundMaterial :: YageResource (GBaseMaterial Texture2D)
  groundMaterial = do
@@ -159,27 +175,46 @@ groundEntityW =
       <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
 
-spheresW :: YageWire t () (Seq DeferredEntity)
+spheresW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
 spheresW   = proc () -> do
-  acquireOnce (placeEntityOnGridXZ (9, 1) (V2 10 1) <$> sphereEntity) -< ()
-  where
-  sphereEntity :: YageResource DeferredEntity
-  sphereEntity =
-    Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
-           <&> transformation.scale        //~ 2.0
-           <&> transformation.position._y  .~ 1.5
-  sphereMaterialId :: YageResource (GBaseMaterial Texture2D)
-  sphereMaterialId = do
-    roughTex    <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_r.png")
-    normalTex   <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_t.png")
-    gBaseMaterialRes defaultGBaseMaterial
-      <&> albedo.materialColor       .~ Mat.opaque Mat.gold
-      -- <&> roughness.materialTexture  .~ roughTex
-      -- <&> roughness.materialColor    .~ 0.5
-      <&> roughness.stpFactor        .~ 2.0
-      -- <&> normalmap.materialTexture  .~ normalTex
-      <&> normalmap.stpFactor        .~ 2.0
-      <&> metallic.materialColor     .~ 1.0
+  s <- acquireOnce sphereEntity -< ()
+  returnA -< empty
+    |> ( s & transformation.position._xyz      .~ V3 (-2.0) (-4.5) (-4.5)
+           & materials.albedo.materialColor       .~ Mat.opaque Mat.gold
+           & materials.roughness.materialColor .~ 0.3
+       )
+    |> ( s & transformation.position._xyz .~ V3 2.5 (-7.2) (5.0) & transformation.scale //~ 2.0
+           & materials.albedo.materialColor    .~ Mat.opaque Mat.silver
+           & materials.roughness.materialColor .~ 0.2
+       )
+
+spheresOnGridW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
+spheresOnGridW = proc () -> do
+  t <- time -< ()
+  ss <- acquireOnce (placeEntityOnGridXZ (1, 1) (V2 10 1) <$> sphereEntity) -< ()
+  returnA -< ss & mapped.transformation.position._xyz .~ V3 (-2.5) (-5.0) (-5.0)
+ where
+  animate :: Double -> DeferredEntity -> DeferredEntity
+  animate t e = e & transformation.position._x +~ sin (t*0.3) * 10.0 & transformation.position._y .~ (5.0) & transformation.position._z .~ (1.0)
+
+
+sphereEntity :: YageResource DeferredEntity
+sphereEntity =
+  Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
+         <&> transformation.scale        //~ 0.2
+         <&> transformation.position._y  .~ 5
+
+sphereMaterialId :: YageResource (GBaseMaterial Texture2D)
+sphereMaterialId = do
+  roughTex    <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_r.png")
+  normalTex   <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_t.png")
+  gBaseMaterialRes defaultGBaseMaterial
+    -- <&> roughness.materialTexture  .~ roughTex
+    -- <&> roughness.materialColor    .~ 0.5
+    <&> roughness.stpFactor        .~ 2.0
+    -- <&> normalmap.materialTexture  .~ normalTex
+    <&> normalmap.stpFactor        .~ 2.0
+    <&> metallic.materialColor     .~ 1.0
 
 placeEntityOnGridXZ :: (Int, Int) -> V2 Double -> DeferredEntity -> Seq DeferredEntity
 placeEntityOnGridXZ (xCnt, yCnt) (V2 dimX dimY) template = foldr (\xyp s -> s |> generate xyp) Seq.empty (gridIdx `zip` positions)
@@ -199,7 +234,7 @@ placeEntityOnGridXZ (xCnt, yCnt) (V2 dimX dimY) template = foldr (\xyp s -> s |>
 -- * Controller Wires
 
 camStartPos :: V3 Double
-camStartPos = V3 0 1 5
+camStartPos = V3 0 0 24
 
 mouseSensitivity :: V2 Double
 mouseSensitivity = V2 (pi/500) (pi/500)
