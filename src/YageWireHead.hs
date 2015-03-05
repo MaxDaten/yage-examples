@@ -106,7 +106,7 @@ mainWire = proc () -> do
         & sky ?~ skyDome
         & lights.dir   .~ singleton directionalLight
         & lights.point .~ singleton redLight
-      scene = Scene (singleton headEntity) env
+      scene = Scene (singleton headEntity) env (Box (-5) 5)
   returnA -< HeadScene scene hdrCam
  where
   directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6

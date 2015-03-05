@@ -86,15 +86,23 @@ pbrTestScene = proc () -> do
   let backOrientation = axisAngle (V3 1 0 0) (deg2rad $ 90)
       wallBack = planeE & transformation.orientation .~ backOrientation
                         & transformation.position._z .~ (-10)
+                        & transformation.scale._y *~ (-1.0)
       leftOrientation =  axisAngle (V3 0 1 0) (deg2rad $ 90) * backOrientation
       wallLeft = planeE & transformation.orientation .~ leftOrientation
                         & transformation.position._x .~ -10
+                        & materials.normalmap.stpFactor._y *~ (-1.0)
+                        & materials.albedo.stpFactor._y *~ (-1.0)
       rightOrientation = axisAngle (V3 0 1 0) (deg2rad $ -90) * backOrientation
       wallRight = planeE & transformation.orientation .~ rightOrientation
                          & transformation.position._x .~ 10
-      floorE = planeE & transformation.position._y .~ -10
+                         & materials.normalmap.stpFactor._y *~ (-1.0)
+                         & materials.albedo.stpFactor._y *~ (-1.0)
+      floorE = planeE & transformation.position._y .~ -9.9
       ceilingE = planeE & transformation.orientation .~ axisAngle (V3 1 0 0) (deg2rad $ 180)
                         & transformation.position._y .~ 10
+                        & transformation.scale._y *~ (-1.0)
+                        & materials.normalmap.stpFactor._y *~ (-1.0)
+                        & materials.albedo.stpFactor._y *~ (-1.0)
   spheres     <- spheresW -< ()
 
   let env = emptyEnvironment
@@ -106,7 +114,7 @@ pbrTestScene = proc () -> do
       --  |> ( wallR & transformation.position._xy .~ V2 5 5 )
       --  |> floorE
   returnA -< PBRScene
-    { _pbrScene          = Scene (entities >< spheres) env
+    { _pbrScene          = Scene (entities >< spheres) env (Box (-12) (12))
     , _pbrCamera         = hdrCam
     }
  where
@@ -178,8 +186,10 @@ groundEntityW =
 spheresW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
 spheresW   = proc () -> do
   s <- acquireOnce sphereEntity -< ()
+  t <- time -< ()
   returnA -< empty
-    |> ( s & transformation.position._xyz      .~ V3 (-2.0) (-4.5) (-4.5)
+    |> ( s & transformation.position._xyz      .~ V3 (-2.0) (-4) (-4.5)
+           & transformation.position._y        +~ sin t * 0.5
            & materials.albedo.materialColor       .~ Mat.opaque Mat.gold
            & materials.roughness.materialColor .~ 0.3
        )
@@ -240,7 +250,7 @@ mouseSensitivity :: V2 Double
 mouseSensitivity = V2 (pi/500) (pi/500)
 
 wasdControlled :: Real t => YageWire t () (V3 Double)
-wasdControlled = wasdMovement (V2 2 2)
+wasdControlled = wasdMovement (V2 4 4)
 
 mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
