@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE BangPatterns           #-}
 {-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE TupleSections          #-}
 
 module Main where
 
@@ -97,7 +98,7 @@ makeLenses ''HeadScene
 
 mainWire :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () HeadScene
 mainWire = proc () -> do
-  hdrCam     <- overA camera cameraControl -< defaultHDRCamera $ idCamera (deg2rad 75) 0.1 100
+  hdrCam     <- hdrController . overA camera cameraControl -< defaultHDRCamera $ idCamera (deg2rad 75) 0.1 100
   skyDome    <- skyDomeW  -< hdrCam^.camera.position
   headEntity <- headW -< ()
   redLight   <- pointlightRedW -< ()
@@ -106,7 +107,7 @@ mainWire = proc () -> do
         & sky ?~ skyDome
         & lights.dir   .~ singleton directionalLight
         & lights.point .~ singleton redLight
-      scene = Scene (singleton headEntity) env (Box (-5) 5)
+      scene = Scene (singleton headEntity) env (Box (-10) 10)
   returnA -< HeadScene scene hdrCam
  where
   directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
@@ -150,9 +151,9 @@ skyDomeW = proc pos -> do
     envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
     radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
     --envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    --radMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    --radMap <- textureRes (sameFaces $ constColorPx gray :: Cubemap (Image PixelRGB8))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
-                         (defaultMaterialSRGB & materialTexture .~ radMap)
+                         (defaultMaterialSRGB & materialTexture .~ radMap & materialColor .~ Mat.opaque Mat.gray)
 
 pointlightRedW :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t a Light
 pointlightRedW = proc _ -> do
@@ -183,7 +184,26 @@ mouseControlled :: Real t => YageWire t () (V2 Double)
 mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mouseVelocity <|> 0
 
 cameraControl :: Real t => YageWire t Camera Camera
-cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation mouseControlled
+cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
+
+hdrController :: Num t => YageWire t HDRCamera HDRCamera
+hdrController =
+  exposure      <~~ ( spin (0, 10) 1.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
+                                           ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
+
+  exposureBias  <~~ ( spin (-10, 10) (-0.05) <<< (( 0.01 <$) <$> keyJustPressed Key'M)     &&&
+                                             ((-0.01 <$) <$> keyJustPressed Key'N) ) >>>
+  whitePoint    <~~ pure 11.2       >>>
+  bloomSettings <~~ pure bloomConfig
+ where
+  bloomConfig :: HDRBloomSettings
+  bloomConfig = defaultBloomSettings
+    & bloomFactor           .~ 0.7
+    & bloomPreDownsampling  .~ 4
+    & bloomGaussPasses      .~ 7
+    & bloomWidth            .~ 1
+    & bloomThreshold        .~ 0.5
+
 
 headRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
 headRotationByInput =

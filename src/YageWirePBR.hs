@@ -87,16 +87,20 @@ pbrTestScene = proc () -> do
       wallBack = planeE & transformation.orientation .~ backOrientation
                         & transformation.position._z .~ (-10)
                         & transformation.scale._y *~ (-1.0)
+
       leftOrientation =  axisAngle (V3 0 1 0) (deg2rad $ 90) * backOrientation
-      wallLeft = planeE & transformation.orientation .~ leftOrientation
-                        & transformation.position._x .~ -10
-                        & materials.normalmap.stpFactor._y *~ (-1.0)
-                        & materials.albedo.stpFactor._y *~ (-1.0)
+      wallLeft = planeE & transformation.orientation        .~ leftOrientation
+                        & transformation.position._x        .~ -10
+                        & materials.normalmap.stpFactor._y  *~ (-1.0)
+                        & materials.albedo.stpFactor._y     *~ (-1.0)
+                        & materials.albedo.materialColor    .~ Mat.opaque Mat.red
+
       rightOrientation = axisAngle (V3 0 1 0) (deg2rad $ -90) * backOrientation
       wallRight = planeE & transformation.orientation .~ rightOrientation
                          & transformation.position._x .~ 10
                          & materials.normalmap.stpFactor._y *~ (-1.0)
                          & materials.albedo.stpFactor._y *~ (-1.0)
+                         & materials.albedo.materialColor    .~ Mat.opaque Mat.green
       floorE = planeE & transformation.position._y .~ -9.9
       ceilingE = planeE & transformation.orientation .~ axisAngle (V3 1 0 0) (deg2rad $ 180)
                         & transformation.position._y .~ 10
@@ -143,8 +147,8 @@ hdrController =
   bloomConfig :: HDRBloomSettings
   bloomConfig = defaultBloomSettings
     & bloomFactor           .~ 0.7
-    & bloomPreDownsampling  .~ 1
-    & bloomGaussPasses      .~ 5
+    & bloomPreDownsampling  .~ 4
+    & bloomGaussPasses      .~ 7
     & bloomWidth            .~ 1
     & bloomThreshold        .~ 0.5
 
@@ -188,9 +192,9 @@ spheresW   = proc () -> do
   s <- acquireOnce sphereEntity -< ()
   t <- time -< ()
   returnA -< empty
-    |> ( s & transformation.position._xyz      .~ V3 (-2.0) (-4) (-4.5)
+    |> ( s & transformation.position._xyz      .~ V3 (-4.5) (-4) (-4.5)
            & transformation.position._y        +~ sin t * 0.5
-           & materials.albedo.materialColor       .~ Mat.opaque Mat.gold
+           & materials.albedo.materialColor    .~ Mat.opaque Mat.gold
            & materials.roughness.materialColor .~ 0.3
        )
     |> ( s & transformation.position._xyz .~ V3 2.5 (-7.2) (5.0) & transformation.scale //~ 2.0
@@ -219,10 +223,11 @@ sphereMaterialId = do
   roughTex    <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_r.png")
   normalTex   <- textureRes =<< (imageRes $ "res" </> "tex" </> "noise_t.png")
   gBaseMaterialRes defaultGBaseMaterial
-    -- <&> roughness.materialTexture  .~ roughTex
-    -- <&> roughness.materialColor    .~ 0.5
+    <&> roughness.materialTexture  .~ roughTex
+    <&> roughness.materialColor    .~ 0.5
     <&> roughness.stpFactor        .~ 2.0
-    -- <&> normalmap.materialTexture  .~ normalTex
+    <&> normalmap.materialTexture  .~ normalTex
+    <&> normalmap.materialColor    .~ rgb 2 2 2 `withOpacity` 0.5
     <&> normalmap.stpFactor        .~ 2.0
     <&> metallic.materialColor     .~ 1.0
 
