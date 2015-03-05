@@ -86,6 +86,7 @@ pbrTestScene = proc () -> do
   deferreConfig <- deferredSettingsController -< def
 
   skyDome <- skyDomeW  -< hdrCam^.camera.position
+  showWallMode <- toggle (keyJustReleased Key'F1) True False -< ()
 
   planeE  <- groundEntityW <&> transformation.scale .~ 20 -< ()
   let backOrientation = axisAngle (V3 1 0 0) (deg2rad $ 90)
@@ -119,8 +120,9 @@ pbrTestScene = proc () -> do
         & lights.dir   .~ fromList [directionalLight]
         & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
         & lights.spot  .~ singleton spotLight01
-      --entities = empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
-      entities = empty |> floorE
+      entities = if showWallMode
+                 then empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
+                 else empty |> floorE
   returnA -< PBRScene
     { _pbrScene          = Scene (entities >< spheres) env (Box (-12) (12))
     , _pbrCamera         = hdrCam
