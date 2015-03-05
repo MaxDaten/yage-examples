@@ -88,8 +88,9 @@ makeLenses ''Head
 -- * View Definition
 
 data HeadScene = HeadScene
-  { _headScene  :: DeferredScene
-  , _headCamera :: HDRCamera
+  { _headScene          :: DeferredScene
+  , _headCamera         :: HDRCamera
+  , _headRenderSettings :: DeferredSettings
   }
 
 makeLenses ''HeadScene
@@ -99,6 +100,8 @@ makeLenses ''HeadScene
 mainWire :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () HeadScene
 mainWire = proc () -> do
   hdrCam     <- hdrController . overA camera cameraControl -< defaultHDRCamera $ idCamera (deg2rad 75) 0.1 100
+  deferredConf <- deferredSettingsController -< def
+
   skyDome    <- skyDomeW  -< hdrCam^.camera.position
   headEntity <- headW -< ()
   redLight   <- pointlightRedW -< ()
@@ -108,7 +111,7 @@ mainWire = proc () -> do
         & lights.dir   .~ singleton directionalLight
         & lights.point .~ singleton redLight
       scene = Scene (singleton headEntity) env (Box (-10) 10)
-  returnA -< HeadScene scene hdrCam
+  returnA -< HeadScene scene hdrCam deferredConf
  where
   directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
 
@@ -126,8 +129,8 @@ headW = acquireOnce headEntity
 
   headMaterial :: YageResource (GBaseMaterial Texture2D)
   headMaterial = do
-    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"small"</>"head_albedo.jpg")
-    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"small"</>"head_tangent.jpg")
+    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"big"</>"head_albedo.jpg")
+    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"head"</>"big"</>"head_tangent.jpg")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
       <&> albedo.materialTransformation.scale._y .~ (-1)
@@ -216,6 +219,9 @@ headRotationByInput =
   . smoothRotationByKey acc att (-xAxis ) Key'Down
   . 1
 
+deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
+deferredSettingsController = overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F12) True False)
+
 -- * The Main
 
 main :: IO ()
@@ -240,6 +246,9 @@ instance HasHDRCamera HeadScene where
 
 instance HasEntities HeadScene (Seq DeferredEntity) where
   entities = headScene.entities
+
+instance HasDeferredSettings HeadScene where
+  deferredSettings = headRenderSettings
 
 instance LinearInterpolatable HeadScene where
   lerp _ _ = id

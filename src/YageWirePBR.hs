@@ -72,6 +72,7 @@ configuration = Configuration appConf winSettings (MonitorOptions "localhost" 80
 data PBRScene = PBRScene
   { _pbrScene          :: DeferredScene
   , _pbrCamera         :: HDRCamera
+  , _pbrRenderSettings :: DeferredSettings
   }
 
 makeLenses ''PBRScene
@@ -80,8 +81,12 @@ makeLenses ''PBRScene
 pbrTestScene :: (HasTime Double (YageTimedInputState t), RealFrac t, Show t) => YageWire t () PBRScene
 pbrTestScene = proc () -> do
   t <- time -< ()
+
   hdrCam  <- hdrCameraW -< ()
+  deferreConfig <- deferredSettingsController -< def
+
   skyDome <- skyDomeW  -< hdrCam^.camera.position
+
   planeE  <- groundEntityW <&> transformation.scale .~ 20 -< ()
   let backOrientation = axisAngle (V3 1 0 0) (deg2rad $ 90)
       wallBack = planeE & transformation.orientation .~ backOrientation
@@ -120,6 +125,7 @@ pbrTestScene = proc () -> do
   returnA -< PBRScene
     { _pbrScene          = Scene (entities >< spheres) env (Box (-12) (12))
     , _pbrCamera         = hdrCam
+    , _pbrRenderSettings = deferreConfig
     }
  where
   directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.0
@@ -263,6 +269,9 @@ mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mous
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
+deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
+deferredSettingsController = overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F12) True False)
+
 -- | Boilerplate
 
 main :: IO ()
@@ -285,6 +294,9 @@ instance HasHDRCamera PBRScene where
 
 instance HasEntities PBRScene (Seq DeferredEntity) where
   entities = pbrScene.entities
+
+instance HasDeferredSettings PBRScene where
+  deferredSettings = pbrRenderSettings
 
 instance LinearInterpolatable PBRScene where
   lerp _ _ = id
