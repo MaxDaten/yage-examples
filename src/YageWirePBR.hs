@@ -119,9 +119,8 @@ pbrTestScene = proc () -> do
         & lights.dir   .~ fromList [directionalLight]
         & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
         & lights.spot  .~ singleton spotLight01
-      entities = empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
-      --  |> ( wallR & transformation.position._xy .~ V2 5 5 )
-      --  |> floorE
+      --entities = empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
+      entities = empty |> floorE
   returnA -< PBRScene
     { _pbrScene          = Scene (entities >< spheres) env (Box (-12) (12))
     , _pbrCamera         = hdrCam
@@ -137,7 +136,7 @@ pbrTestScene = proc () -> do
 
 hdrCameraW :: Real t => YageWire t () HDRCamera
 hdrCameraW =
-  let initCamera = idCamera (deg2rad 75) 0.1 100
+  let initCamera = idCamera (deg2rad 75) 0.1 500
   in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
 hdrController :: Num t => YageWire t HDRCamera HDRCamera
@@ -199,11 +198,13 @@ spheresW   = proc () -> do
   t <- time -< ()
   returnA -< empty
     |> ( s & transformation.position._xyz      .~ V3 (-4.5) (-4) (-4.5)
-           & transformation.position._y        +~ sin t * 0.5
+           & transformation.position._y        +~ sin t * 1.2
+           & transformation.scale              .~ 4.5
            & materials.albedo.materialColor    .~ Mat.opaque Mat.gold
            & materials.roughness.materialColor .~ 0.3
        )
-    |> ( s & transformation.position._xyz .~ V3 2.5 (-7.2) (5.0) & transformation.scale //~ 2.0
+    |> ( s & transformation.position._xyz .~ V3 2.5 (-7.2) (5.0)
+           & transformation.scale              .~ 2
            & materials.albedo.materialColor    .~ Mat.opaque Mat.silver
            & materials.roughness.materialColor .~ 0.2
        )
@@ -221,7 +222,6 @@ spheresOnGridW = proc () -> do
 sphereEntity :: YageResource DeferredEntity
 sphereEntity =
   Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
-         <&> transformation.scale        //~ 0.2
          <&> transformation.position._y  .~ 5
 
 sphereMaterialId :: YageResource (GBaseMaterial Texture2D)
@@ -270,7 +270,9 @@ cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
-deferredSettingsController = overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F12) True False)
+deferredSettingsController =
+  overA showDebugOverlay (toggle (keyJustReleased Key'F12) False True)
+  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) True False)
 
 -- | Boilerplate
 
