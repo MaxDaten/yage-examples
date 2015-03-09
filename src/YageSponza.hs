@@ -55,7 +55,7 @@ mainWire = proc () -> do
 
     let env = emptyEnvironment & sky ?~ skyDome & lights.point .~ singleton directionalLight
     returnA -< SponzaScene
-      { _sponzaScene          = Scene (singleton world) env (Box (-100) 100)
+      { _sponzaScene          = Scene (singleton world) env (Box (-5) 5)
       , _sponzaCamera         = hdrCam
       , _sponzaRenderSettings = deferreConfig
       }
@@ -119,7 +119,7 @@ skyDomeW = proc pos -> do
 
 hdrCameraW :: Real t => YageWire t () HDRCamera
 hdrCameraW =
-  let initCamera = idCamera (deg2rad 75) 0.1 500
+  let initCamera = idCamera (deg2rad 75) 0.1 250
   in hdrController . (defaultHDRCamera <$> cameraControl . pure initCamera)
 
 hdrController :: Num t => YageWire t HDRCamera HDRCamera
@@ -141,9 +141,10 @@ hdrController =
     & bloomThreshold        .~ 0.5
 
 
-
+-- _cameraPosition = V3 (-3.02029386283718) 0.3159171871883328 (-6.059381486659588e-2),
+-- _cameraOrientation = Quaternion 0.6918433043791026 (V3 5.0077448525642006e-2 (-0.7184294686934339) 5.2001825427923414e-2),
 camStartPos :: V3 Double
-camStartPos = V3 0 2 2
+camStartPos = V3 (-3) 0.3 (0.05)
 
 mouseSensitivity :: V2 Double
 mouseSensitivity = V2 (pi/500) (pi/500)
@@ -160,7 +161,7 @@ cameraControl = fpsCameraMovement camStartPos wasdControlled . fpsCameraRotation
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
 deferredSettingsController =
   overA showDebugOverlay (toggle (keyJustReleased Key'F12) False True)
-  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) True False)
+  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
 
 -- * Boilerplate
 
