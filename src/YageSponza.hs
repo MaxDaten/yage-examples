@@ -83,10 +83,10 @@ worldEntityW = acquireOnce sponzaEntity <&> transformation.scale //~ 400
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"default"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
-      <&> albedo.materialTexture     .~ albedoTex
-      <&> normalmap.materialTexture  .~ normalTex
-      <&> albedo.stpFactor           .~ 2.0
-      <&> normalmap.stpFactor        .~ 2.0
+      -- <&> albedo.materialTexture     .~ albedoTex
+      -- <&> normalmap.materialTexture  .~ normalTex
+      -- <&> albedo.stpFactor           .~ 2.0
+      -- <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
 
   sponzaMesh :: YageResource (Mesh YGMVertex)
