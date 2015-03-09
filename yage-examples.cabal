@@ -110,3 +110,5 @@ executable yage-sponza
                         , yage-geometry   == 0.0.0.3
 
                         , netwire         == 5.0.0
+                        , linear          >= 1.15
+                        , containers      >= 0.5
