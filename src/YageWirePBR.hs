@@ -67,7 +67,7 @@ configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
 -------------------------------------------------------------------------------
--- View Definition
+-- * View Definition
 
 data PBRScene = PBRScene
   { _pbrScene          :: DeferredScene
@@ -211,6 +211,11 @@ spheresW   = proc () -> do
            & materials.roughness.materialColor .~ 0.2
        )
 
+sphereEntity :: YageResource DeferredEntity
+sphereEntity =
+  Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
+         <&> transformation.position._y  .~ 5
+
 spheresOnGridW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
 spheresOnGridW = proc () -> do
   t <- time -< ()
@@ -220,11 +225,6 @@ spheresOnGridW = proc () -> do
   animate :: Double -> DeferredEntity -> DeferredEntity
   animate t e = e & transformation.position._x +~ sin (t*0.3) * 10.0 & transformation.position._y .~ (5.0) & transformation.position._z .~ (1.0)
 
-
-sphereEntity :: YageResource DeferredEntity
-sphereEntity =
-  Entity <$> (fromMesh =<< sphereMesh) <*> sphereMaterialId <*> pure idTransformation
-         <&> transformation.position._y  .~ 5
 
 sphereMaterialId :: YageResource (GBaseMaterial Texture2D)
 sphereMaterialId = do
