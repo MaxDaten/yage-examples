@@ -55,9 +55,9 @@ mainWire = proc () -> do
 
     let env = emptyEnvironment & sky ?~ skyDome & lights.point .~ singleton directionalLight
     returnA -< SponzaScene
-      { _sponzaScene          = Scene (singleton world) env (Box (-5) 5)
+      { _sponzaScene          = Scene (singleton world) env (Box (-4) 4)
       , _sponzaCamera         = hdrCam
-      , _sponzaRenderSettings = deferreConfig
+      , _sponzaRenderSettings = deferreConfig & ambientOcclusionMinDiameterFactor .~ 5.0
       }
  where
   directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.0

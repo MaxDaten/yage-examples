@@ -91,26 +91,27 @@ pbrTestScene = proc () -> do
   planeE  <- groundEntityW <&> transformation.scale .~ 20 -< ()
   let backOrientation = axisAngle (V3 1 0 0) (deg2rad $ 90)
       wallBack = planeE & transformation.orientation .~ backOrientation
-                        & transformation.position._z .~ (-10)
+                        & transformation.position._z .~ (-9.9)
                         & transformation.scale._y *~ (-1.0)
 
       leftOrientation =  axisAngle (V3 0 1 0) (deg2rad $ 90) * backOrientation
       wallLeft = planeE & transformation.orientation        .~ leftOrientation
-                        & transformation.position._x        .~ -10
+                        & transformation.position._x        .~ -9.9
                         & materials.normalmap.stpFactor._y  *~ (-1.0)
                         & materials.albedo.stpFactor._y     *~ (-1.0)
                         & materials.albedo.materialColor    .~ Mat.opaque Mat.red
 
       rightOrientation = axisAngle (V3 0 1 0) (deg2rad $ -90) * backOrientation
       wallRight = planeE & transformation.orientation .~ rightOrientation
-                         & transformation.position._x .~ 10
+                         & transformation.position._x .~ 9.9
                          & materials.normalmap.stpFactor._y *~ (-1.0)
                          & materials.albedo.stpFactor._y *~ (-1.0)
                          & materials.albedo.materialColor    .~ Mat.opaque Mat.green
       floorE = planeE & transformation.position._y .~ -9.9
       ceilingE = planeE & transformation.orientation .~ axisAngle (V3 1 0 0) (deg2rad $ 180)
-                        & transformation.position._y .~ 10
+                        & transformation.position._y .~ 9.9
                         & transformation.scale._y *~ (-1.0)
+                        & transformation.scale._z *~ (-1.0)
                         & materials.normalmap.stpFactor._y *~ (-1.0)
                         & materials.albedo.stpFactor._y *~ (-1.0)
   spheres     <- spheresW -< ()
@@ -121,10 +122,10 @@ pbrTestScene = proc () -> do
         & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
         & lights.spot  .~ singleton spotLight01
       entities = if showWallMode
-                 then empty |> wallBack |> wallLeft |> wallRight |> floorE |> ceilingE
+                 then empty |> wallBack |> wallLeft |> wallRight |> floorE -- |> ceilingE
                  else empty |> floorE
   returnA -< PBRScene
-    { _pbrScene          = Scene (entities >< spheres) env (Box (-12) (12))
+    { _pbrScene          = Scene (entities >< spheres) env (Box (-20) (20))
     , _pbrCamera         = hdrCam
     , _pbrRenderSettings = deferreConfig
     }
@@ -274,7 +275,7 @@ cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement c
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
 deferredSettingsController =
   overA showDebugOverlay (toggle (keyJustReleased Key'F12) False True)
-  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) True False)
+  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
 
 -- | Boilerplate
 
