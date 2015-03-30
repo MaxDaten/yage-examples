@@ -33,7 +33,9 @@ import Yage.Examples.Shared
 import Data.Traversable (sequenceA)
 import qualified Data.Sequence as Seq
 import Data.Sequence ((><))
+import Data.List (cycle)
 
+import Yage.Rendering.Pipeline.Voxel.VisualizeVoxel
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
@@ -274,8 +276,10 @@ cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement c
 
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
 deferredSettingsController =
-  overA showDebugOverlay (toggle (keyJustReleased Key'F12) False True)
+  overA voxelDebugModes (hold . popOnEvent (cycle modes) . keyJustReleased Key'F12)
   . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
+  where
+  modes = [[VisualizeSceneVoxel], [VisualizePageMask], [VisualizeSceneVoxel, VisualizePageMask], []]
 
 -- | Boilerplate
 

@@ -34,6 +34,9 @@ import Yage.Examples.Shared
 import Data.Traversable (sequenceA)
 import qualified Data.Sequence as Seq
 import Data.Sequence ((><))
+import Data.List (cycle)
+
+import Yage.Rendering.Pipeline.Voxel.VisualizeVoxel
 
 
 winSettings :: WindowConfig
@@ -220,7 +223,12 @@ headRotationByInput =
   . 1
 
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
-deferredSettingsController = overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F12) True False)
+deferredSettingsController =
+    overA voxelDebugModes (hold . popOnEvent (cycle modes) . keyJustReleased Key'F12)
+  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
+  where
+  modes = [[VisualizeSceneVoxel], [VisualizePageMask], [VisualizeSceneVoxel, VisualizePageMask], []]
+
 
 -- * The Main
 
