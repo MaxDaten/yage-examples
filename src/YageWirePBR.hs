@@ -101,14 +101,14 @@ pbrTestScene = proc () -> do
                         & transformation.position._x        .~ -9.9
                         & materials.normalmap.stpFactor._y  *~ (-1.0)
                         & materials.albedo.stpFactor._y     *~ (-1.0)
-                        & materials.albedo.materialColor    .~ Mat.opaque Mat.red
+                        -- & materials.albedo.materialColor    .~ Mat.opaque Mat.red
 
       rightOrientation = axisAngle (V3 0 1 0) (deg2rad $ -90) * backOrientation
       wallRight = planeE & transformation.orientation .~ rightOrientation
                          & transformation.position._x .~ 9.9
                          & materials.normalmap.stpFactor._y *~ (-1.0)
                          & materials.albedo.stpFactor._y *~ (-1.0)
-                         & materials.albedo.materialColor    .~ Mat.opaque Mat.green
+                         -- & materials.albedo.materialColor    .~ Mat.opaque Mat.green
       floorE = planeE & transformation.position._y .~ -9.9
       ceilingE = planeE & transformation.orientation .~ axisAngle (V3 1 0 0) (deg2rad $ 180)
                         & transformation.position._y .~ 9.9
@@ -188,14 +188,22 @@ groundEntityW =
  where
  groundMaterial :: YageResource (GBaseMaterial Texture2D)
  groundMaterial = do
-    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
-    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
+    -- albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
+    -- normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
+    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_alb"<.>"png")
+    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_n"<.>"png")
+    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_g"<.>"png")
+    metalTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_h"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
       <&> albedo.stpFactor           .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
       <&> normalmap.stpFactor        .~ 2.0
       <&> roughness.materialColor    .~ 0.5
+      <&> roughness.materialTexture  .~ roughTex
+      <&> roughness.stpFactor        .~ 2.0
+      <&> metallic.stpFactor         .~ 2.0
+      <&> roughness.materialTexture  .~ metalTex
 
 spheresW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
 spheresW   = proc () -> do
@@ -276,8 +284,8 @@ cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement c
 
 deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
 deferredSettingsController =
-  overA voxelDebugModes (hold . popOnEvent (cycle modes) . keyJustReleased Key'F12)
-  . overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
+  overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
+  -- . overA voxelDebugModes (hold . popOnEvent (cycle modes) . keyJustReleased Key'F12)
   where
   modes = [[VisualizeSceneVoxel], [VisualizePageMask], [VisualizeSceneVoxel, VisualizePageMask], []]
 
@@ -309,4 +317,3 @@ instance HasDeferredSettings PBRScene where
 
 instance LinearInterpolatable PBRScene where
   lerp _ _ = id
-

@@ -1,20 +1,22 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE RecordWildCards        #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE TupleSections          #-}
 
 module Main where
 
-import Data.Traversable (sequenceA)
 
-import Yage
+import Yage hiding ((><), point)
 import Yage.Lens hiding ((<.>))
-import Yage.Math hiding (normal)
+import Yage.Math hiding (normal, (><), point)
 import Yage.Wire hiding ((<>))
+import Yage.Wire.Utils
 
 import Yage.Camera
 import Yage.Scene
@@ -29,18 +31,27 @@ import Yage.Rendering.Pipeline.Deferred
 import Yage.Rendering.Pipeline.Deferred.SkyPass
 import Yage.Formats.Ygm
 import Yage.Examples.Shared
+import Data.Traversable (sequenceA)
+import qualified Data.Sequence as Seq
+import Data.Sequence ((><))
+import Data.List (cycle)
+
+import Yage.Rendering.Pipeline.Voxel.VisualizeVoxel
+
 
 winSettings :: WindowConfig
 winSettings = WindowConfig
   { windowSize = (1200, 800)
   , windowHints =
     [ WindowHint'ContextVersionMajor  4
-    , WindowHint'ContextVersionMinor  1
+    , WindowHint'ContextVersionMinor  4
     , WindowHint'OpenGLProfile        OpenGLProfile'Core
     , WindowHint'OpenGLForwardCompat  True
     , WindowHint'RefreshRate          60
-    --, WindowHint'Resizable            False
-    --, WindowHint'Decorated            False
+    , WindowHint'sRGBCapable          True
+    , WindowHint'OpenGLDebugContext   True
+    -- , WindowHint'Resizable            False
+    , WindowHint'Decorated            True
     ]
   }
 
@@ -58,114 +69,113 @@ appConf = defaultAppConfig{ logPriority = INFO }
 configuration :: Configuration
 configuration = Configuration appConf winSettings (MonitorOptions "localhost" 8080 True False)
 
-type CubeEntity = Entity (RenderData Word32 YGMVertex) (GBaseMaterial Texture2D)
-data CubeScene = CubeScene
-  { _cubeScene          :: DeferredScene
-  , _cubeCamera         :: HDRCamera
+data HeadView = HeadView
+    { _viewCamera     :: !Camera
+    , _theHead        :: !Head
+    , _lightPosRed    :: !(V3 Double)
+    , _lightPosBlue   :: !(V3 Double)
+    }
+    deriving (Show)
+
+data Head = Head
+    { _headPosition    :: !(V3 Double)
+    , _headOrientation :: !(Quaternion Double)
+    , _headScale       :: !(V3 Double)
+    }
+    deriving (Show)
+
+makeLenses ''HeadView
+makeLenses ''Head
+
+-------------------------------------------------------------------------------
+-- * View Definition
+
+data HeadScene = HeadScene
+  { _headScene          :: DeferredScene
+  , _headCamera         :: HDRCamera
+  , _headRenderSettings :: DeferredSettings
   }
 
-makeLenses ''CubeScene
+makeLenses ''HeadScene
 
-mainWire :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t () CubeScene
+-- * Main Logic
+
+mainWire :: (HasTime Double (YageTimedInputState t), Real t, Floating t, Show t) => YageWire t () HeadScene
 mainWire = proc () -> do
-  cam      <- overA camera cameraControl -< initCamera
-  scene    <- sceneWire -< cam^.camera
-  returnA -< CubeScene scene cam
+  hdrCam     <- hdrController . overA camera cameraControl -< defaultHDRCamera $ idCamera (deg2rad 75) 0.1 100
+  deferredConf <- deferredSettingsController -< def
 
+  skyDome    <- skyDomeW  -< hdrCam^.camera.position
+  cubeEntity <- cubeW -< ()
+  redLight   <- pointlightRedW -< ()
 
-sceneWire :: Real t => YageWire t Camera DeferredScene
-sceneWire = proc cam -> do
-  cubeEntity <- cubeEntityW >>> (transformation.orientation <~~ cubeRotationByInput) -< ()
-  skyDome    <- skyDomeW -< cam^.position
-  returnA -< Scene
-    { _sceneEntities    = fromList [ cubeEntity ]
-    , _sceneEnvironment = emptyEnvironment & sky    ?~ skyDome
-                                           & lights .~ fromList [ mainLight, spotlight, directionLight ]
-    }
+  let env = emptyEnvironment
+        & sky ?~ skyDome
+        -- & lights.dir   .~ singleton directionalLight
+        & lights.point .~ singleton redLight
+      scene = Scene (singleton cubeEntity) env (Box (-1) 1)
+  returnA -< HeadScene scene hdrCam deferredConf
  where
-  mainLight = Light
-    { _lightType           = Pointlight
-    , _lightTransformation = idTransformation & scale .~ 5 & position .~ (V3 0 5 0)
-    , _lightColor          = 1
-    , _lightIntensity      = 50
-    }
-  spotlight = makeSpotlight (V3 0 5 0) (V3 0 (-1) 0) 10 13 (V3 1 1 1) 50
-  directionLight = makeDirectionalLight (V3 0 (-1) (-1)) 1 25
+  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
 
-cubeEntityW :: YageWire t b CubeEntity
-cubeEntityW = acquireOnce (cube <&> transformation.scale //~ 2)
+cubeW :: YageWire t () DeferredEntity
+cubeW = acquireOnce cubeEntity
  where
-  cube :: YageResource CubeEntity
-  cube = Entity <$> (fromMesh =<< cubeMesh) <*> cubeMaterial <*> pure idTransformation
+  cubeEntity :: YageResource DeferredEntity
+  cubeEntity = Entity
+    <$> (fromMesh =<< cubeMesh) <*> cubeMaterial <*> pure idTransformation
+    <&> transformation.scale         .~ 1
+    <&> transformation.position      .~ V3 (-0.5) (-0.5) (-0.5)
+
+  cubeMesh :: YageResource (Mesh YGMVertex)
+  cubeMesh = meshRes $ loadYGM id ("res" </> "model" </> "Cube.ygm", mkSelection ["face"])
+
   cubeMaterial :: YageResource (GBaseMaterial Texture2D)
   cubeMaterial = do
-    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_d"<.>"png")
-    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
+    albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_alb"<.>"png")
+    normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_n"<.>"png")
+    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_r"<.>"png")
+    metalTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_h"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
-      <&> albedo.stpFactor           .~ 2.0
       <&> normalmap.materialTexture  .~ normalTex
-      <&> normalmap.stpFactor        .~ 2.0
-      <&> roughness.materialColor    .~ 0.5
-  cubeMesh :: YageResource (Mesh YGMVertex)
-  cubeMesh = meshRes $ loadYGM id ( "res" </> "model" </> "Cube.ygm", mkSelection ["face"] )
+      <&> roughness.materialTexture  .~ roughTex
+      <&> metallic.materialTexture   .~ metalTex
+      -- <&> roughness.materialColor    .~ 0
 
-skyDomeW :: YageWire t (V3 Double) DeferredSky
+
+skyDomeW :: Real t => YageWire t (V3 Double) DeferredSky
 skyDomeW = proc pos -> do
-  s <- acquireOnce skyEntity -< ()
-  returnA -< s & transformation.scale     .~ 50
-               & transformation.position  .~ pos
+  skye <- acquireOnce skyEntity -< ()
+  returnA -< skye
+    & transformation.position  .~ pos
+    & transformation.scale     .~ 50
+
  where
   skyEntity :: YageResource DeferredSky
   skyEntity = Entity <$> fromMesh skydome <*> skyMaterial <*> pure idTransformation
+
   skyMaterial :: YageResource (SkyMaterial TextureCube)
   skyMaterial = do
-    envMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
-    radMap <- textureRes =<< (sameFaces <$> (imageRes $ "res"</>"tex"</>"misc"</>"blueprint"</>"Seamless Blueprint Textures"</>"1"<.>"png" ))
-    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap & materialColor .~ darken 0.1 (opaque white))
-                         (defaultMaterialSRGB & materialTexture .~ radMap)
+    envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
+    radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
+    --envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
+    --radMap <- textureRes (sameFaces $ constColorPx gray :: Cubemap (Image PixelRGB8))
+    return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
+                         (defaultMaterialSRGB & materialTexture .~ radMap & materialColor .~ Mat.opaque Mat.gray)
 
-initCamera = defaultHDRCamera ( idCamera (deg2rad 75) 0.1 10000 )
-  & exposure           .~ 2
-  & exposureBias       .~ 0.0
-  & whitePoint         .~ 11.2
-  & bloomSettings      .~ (defaultBloomSettings
-    & bloomFactor           .~ 0.7
-    & bloomPreDownsampling  .~ 2
-    & bloomGaussPasses      .~ 5
-    & bloomWidth            .~ 2
-    & bloomThreshold        .~ 0.5)
+pointlightRedW :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t a Light
+pointlightRedW = proc _ -> do
+  pos <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
+  returnA -< makePointlight pos 5 (V3 1 0 0) 0.6
 
+-- * Movement
 
-{--
-
-
-mainWire = proc _ -> do
-
-    sky    <- skyDomeW -< cam^.hdrCameraHandle.cameraLocation
-
-    returnA -< emptyScene cam emptyGUI
-                & sceneSky      ?~ sky
-                & sceneEntities .~ fromList [ boxEntity ]
-                & sceneLights   .~ fromList [ frontLight ]
-
-    where
-    texDir  = "res"</>"tex"
-
-    frontLight  = Light
-                    { _lightType      = Pointlight (V3 0 1 25) 100
-                    , _lightColor     = 1
-                    , _lightIntensity = 50
-                    }
-
-
-
---}
 camStartPos :: V3 Double
-camStartPos = V3 0 0 2
+camStartPos = V3 0 0.0 2
 
 mouseSensitivity :: V2 Double
-mouseSensitivity = V2 (pi/500) (pi/500)
+mouseSensitivity = V2 (-pi/500) (-pi/500)
 
 wasdControlled :: Real t => YageWire t () (V3 Double)
 wasdControlled = wasdMovement (V2 2 2)
@@ -176,19 +186,36 @@ mouseControlled = whileKeyDown Key'LeftControl . arr (mouseSensitivity *) . mous
 cameraControl :: Real t => YageWire t Camera Camera
 cameraControl = arcBallRotation mouseControlled . arr (0,) . fpsCameraMovement camStartPos wasdControlled
 
-cubeRotationByInput :: (Real t) => YageWire t a (Quaternion Double)
-cubeRotationByInput =
-    let acc         = 20
-        att         = 0.87
-    in
-   smoothRotationByKey acc att ( yAxis ) Key'Right
- . smoothRotationByKey acc att (-yAxis ) Key'Left
- . smoothRotationByKey acc att ( xAxis ) Key'Up
- . smoothRotationByKey acc att (-xAxis ) Key'Down
- . 1
+hdrController :: Num t => YageWire t HDRCamera HDRCamera
+hdrController =
+  exposure      <~~ ( spin (0, 10) 1.0 <<< (( 0.05 <$) <$> keyJustPressed Key'Period)  &&&
+                                           ((-0.05 <$) <$> keyJustPressed Key'Comma) ) >>>
+
+  exposureBias  <~~ ( spin (-10, 10) (-0.05) <<< (( 0.01 <$) <$> keyJustPressed Key'M)     &&&
+                                             ((-0.01 <$) <$> keyJustPressed Key'N) ) >>>
+  whitePoint    <~~ pure 11.2       >>>
+  bloomSettings <~~ pure bloomConfig
+ where
+  bloomConfig :: HDRBloomSettings
+  bloomConfig = defaultBloomSettings
+    & bloomFactor           .~ 0.7
+    & bloomPreDownsampling  .~ 4
+    & bloomGaussPasses      .~ 7
+    & bloomWidth            .~ 1
+    & bloomThreshold        .~ 0.5
+
+
+deferredSettingsController :: Num t => YageWire t DeferredSettings DeferredSettings
+deferredSettingsController =
+  overA activeVoxelAmbientOcclusion (toggle (keyJustReleased Key'F9) False True)
+  -- . overA voxelDebugModes (hold . popOnEvent (cycle modes) . keyJustReleased Key'F12)
+
+-- * The Main
 
 main :: IO ()
 main = yageMain "yage-cube" configuration mainWire yDeferredLighting (1/60)
+
+-- * Boilerplate
 
 instance HasMonitorOptions Configuration where
   monitorOptions = mainMonitorOptions
@@ -199,16 +226,17 @@ instance HasWindowConfig Configuration where
 instance HasApplicationConfig Configuration where
   applicationConfig = mainAppConfig
 
+instance HasScene HeadScene DeferredEntity DeferredEnvironment where
+  scene = headScene
 
-instance HasScene CubeScene DeferredEntity DeferredEnvironment where
-  scene = cubeScene
+instance HasHDRCamera HeadScene where
+  hdrCamera = headCamera
 
-instance HasHDRCamera CubeScene where
-  hdrCamera = cubeCamera
+instance HasEntities HeadScene (Seq DeferredEntity) where
+  entities = headScene.entities
 
-instance HasEntities CubeScene (Seq CubeEntity) where
-  entities = cubeScene.entities
+instance HasDeferredSettings HeadScene where
+  deferredSettings = headRenderSettings
 
-instance LinearInterpolatable CubeScene where
+instance LinearInterpolatable HeadScene where
   lerp _ _ = id
-
