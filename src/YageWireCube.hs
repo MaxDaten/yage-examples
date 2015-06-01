@@ -112,11 +112,13 @@ mainWire = proc () -> do
   let env = emptyEnvironment
         & sky ?~ skyDome
         -- & lights.dir   .~ singleton directionalLight
-        & lights.point .~ singleton redLight
+        -- & lights.point .~ singleton redLight
+        & lights.spot  .~ singleton spotLight01
       scene = Scene (singleton cubeEntity) env (Box (-1) 1)
   returnA -< HeadScene scene hdrCam deferredConf
  where
-  directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 1 0.953 0.918) 0.6
+  -- directionalLight = makeDirectionalLight (V3 (-1) (-1) (-1)) (V3 0 0.953 0) 0.6
+  spotLight01 = makeSpotlight ( V3 8 10 2 ) ( V3 (-5) (-5) (-5) ) 50 60  (V3 1 0.953 0.918) 5
 
 cubeW :: YageWire t () DeferredEntity
 cubeW = acquireOnce cubeEntity
@@ -134,11 +136,12 @@ cubeW = acquireOnce cubeEntity
   cubeMaterial = do
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_alb"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_n"<.>"png")
-    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_r"<.>"png")
+    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_rr"<.>"png")
     metalTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_h"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
       <&> normalmap.materialTexture  .~ normalTex
+      <&> roughness.materialColor    .~ 1
       <&> roughness.materialTexture  .~ roughTex
       <&> metallic.materialTexture   .~ metalTex
       -- <&> roughness.materialColor    .~ 0
@@ -159,15 +162,13 @@ skyDomeW = proc pos -> do
   skyMaterial = do
     envMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"small"</>"strip_half.jpg")))
     radMap <- (textureRes =<< (cubeCrossMipsRes Strip ("res"</>"tex"</>"env"</>"Sea"</>"pmrem"</>"*_m<->.png")))
-    --envMap <- textureRes (sameFaces $ blackDummy :: Cubemap (Image PixelRGB8))
-    --radMap <- textureRes (sameFaces $ constColorPx gray :: Cubemap (Image PixelRGB8))
     return $ SkyMaterial (defaultMaterialSRGB & materialTexture .~ envMap)
                          (defaultMaterialSRGB & materialTexture .~ radMap & materialColor .~ Mat.opaque Mat.gray)
 
 pointlightRedW :: (HasTime Double (YageTimedInputState t), Real t) => YageWire t a Light
 pointlightRedW = proc _ -> do
-  pos <- arr (\t-> V3 0 0 (-0.5) + V3 (sin t * 0.5) 0 (cos t * 0.5)) . arr (/2) . time -< ()
-  returnA -< makePointlight pos 5 (V3 1 0 0) 0.6
+  pos <- arr (\t-> V3 0 0 0 + V3 (sin t * 2) 0 (cos t * 2)) . arr (/2) . time -< ()
+  returnA -< makePointlight pos 4 (V3 1 0 0) 0.6
 
 -- * Movement
 

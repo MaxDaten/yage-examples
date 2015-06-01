@@ -120,9 +120,9 @@ pbrTestScene = proc () -> do
 
   let env = emptyEnvironment
         & sky ?~ skyDome
-        & lights.dir   .~ fromList [directionalLight]
-        & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
-        & lights.spot  .~ singleton spotLight01
+        -- & lights.dir   .~ fromList [directionalLight]
+        -- & lights.point .~ empty |> pLight0 |> pLight1 |> pLight2 |> pLight3
+        -- & lights.spot  .~ singleton spotLight01
       entities = if showWallMode
                  then empty |> wallBack |> wallLeft |> wallRight |> floorE -- |> ceilingE
                  else empty |> floorE
@@ -192,7 +192,7 @@ groundEntityW =
     -- normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"floor_n"<.>"png")
     albedoTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_alb"<.>"png")
     normalTex <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_n"<.>"png")
-    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_g"<.>"png")
+    roughTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_r"<.>"png")
     metalTex  <- textureRes =<< (imageRes $ "res"</>"tex"</>"metal"</>"iron-dungeon"</>"Door_IronDungeonDoor_1k_h"<.>"png")
     gBaseMaterialRes defaultGBaseMaterial
       <&> albedo.materialTexture     .~ albedoTex
@@ -203,7 +203,7 @@ groundEntityW =
       <&> roughness.materialTexture  .~ roughTex
       <&> roughness.stpFactor        .~ 2.0
       <&> metallic.stpFactor         .~ 2.0
-      <&> roughness.materialTexture  .~ metalTex
+      <&> metallic.materialTexture   .~ metalTex
 
 spheresW :: (HasTime Double (YageTimedInputState t), RealFrac t) => YageWire t () (Seq DeferredEntity)
 spheresW   = proc () -> do
